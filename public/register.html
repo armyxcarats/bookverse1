@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookverse Register</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { 
+      margin: 0; 
+      padding: 20px; 
+      background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .register-container {
+      width: 100%;
+      max-width: 550px;
+    }
+    .register-card {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+    .register-card h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+    .register-card > p {
+      margin: 0 0 32px 0;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .form-section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+      margin: 24px 0 16px 0;
+      padding-top: 16px;
+      border-top: 1px solid #e5e5e5;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #333;
+      font-size: 14px;
+    }
+    .form-group .optional {
+      font-weight: 400;
+      color: #999;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #8b3a3a;
+      box-shadow: 0 0 0 3px rgba(139, 58, 58, 0.1);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .register-btn {
+      width: 100%;
+      padding: 12px;
+      background: #8b3a3a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 24px;
+      margin-bottom: 16px;
+      transition: background 0.2s;
+    }
+    .register-btn:hover {
+      background: #a84848;
+    }
+    .register-btn:active {
+      transform: scale(0.98);
+    }
+    .message {
+      padding: 12px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .auth-links {
+      padding-top: 16px;
+      border-top: 1px solid #e5e5e5;
+      text-align: center;
+      font-size: 13px;
+    }
+    .auth-links a {
+      color: #8b3a3a;
+      text-decoration: none;
+      display: block;
+      margin: 8px 0;
+      transition: color 0.2s;
+    }
+    .auth-links a:hover {
+      color: #a84848;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <div class="register-card">
+      <h1>Create New Account</h1>
+      <p>Fill in your information to get started with Bookverse.</p>
+
+      <form id="registerForm" onsubmit="return false;" enctype="multipart/form-data">
+        <div class="form-section-title">Fill Personal Information</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstName">First Name <span class="required">*</span></label>
+            <input id="firstName" type="text" placeholder="Enter your name" required>
+          </div>
+          <div class="form-group">
+            <label for="lastName">Last Name <span class="required">*</span></label>
+            <input id="lastName" type="text" placeholder="Enter your name" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="title">Title <span class="optional">(optional)</span></label>
+          <select id="title">
+            <option value="">Select item...</option>
+            <option>Mr.</option>
+            <option>Mrs.</option>
+            <option>Ms.</option>
+            <option>Dr.</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="birthDate">Birth Date <span class="required">*</span></label>
+          <input id="birthDate" type="date" required>
+        </div>
+
+        <div class="form-group">
+          <label for="gender">Gender <span class="optional">(optional)</span></label>
+          <select id="gender">
+            <option value="">-- Select gender --</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number (Optional) <span class="required">*</span></label>
+          <input id="phone" type="text" placeholder="Enter your phone number" required>
+        </div>
+
+        <div class="form-group">
+          <label for="profilePhoto">Profile Photo <span class="optional">(optional)</span></label>
+          <input id="profilePhoto" type="file" accept="image/jpeg,image/png,image/jpg">
+        </div>
+
+        <div class="form-section-title">Account Information</div>
+
+        <div class="form-group">
+          <label for="email">Email <span class="required">*</span></label>
+          <input id="email" type="email" placeholder="Enter your email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password <span class="required">*</span></label>
+          <input id="password" type="password" placeholder="Enter your password" required>
+        </div>
+
+        <button id="submit" class="register-btn" type="submit">REGISTER</button>
+        <div id="message" class="message" style="display:none;"></div>
+      </form>
+
+      <div class="auth-links">
+        <a href="/login">Already have an account? Login</a>
+        <a href="/">Back to Store</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script>
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+    const titleInput = document.getElementById('title');
+    const birthDateInput = document.getElementById('birthDate');
+    const genderInput = document.getElementById('gender');
+    const phoneInput = document.getElementById('phone');
+    const profilePhotoInput = document.getElementById('profilePhoto');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const submitButton = document.getElementById('submit');
+    const messageBox = document.getElementById('message');
+
+    function showMessage(text, type = 'success') {
+      messageBox.textContent = text;
+      messageBox.className = type === 'error' ? 'message error' : 'message success';
+      messageBox.style.display = 'block';
+    }
+
+    submitButton.addEventListener('click', () => {
+      messageBox.style.display = 'none';
+      const firstName = firstNameInput.value.trim();
+      const lastName = lastNameInput.value.trim();
+      const title = titleInput.value;
+      const birthDate = birthDateInput.value;
+      const gender = genderInput.value;
+      const phone = phoneInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!firstName || !lastName || !birthDate || !phone || !email || !password) {
+        showMessage('Please fill all required fields.', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('firstName', firstName);
+      formData.append('lastName', lastName);
+      formData.append('title', title);
+      formData.append('birthDate', birthDate);
+      formData.append('gender', gender);
+      formData.append('phone', phone);
+      formData.append('email', email);
+      formData.append('password', password);
+      if (profilePhotoInput.files.length) {
+        formData.append('image', profilePhotoInput.files[0]);
+      }
+
+      $.ajax({
+        url: '/api/v1/register',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success(data) {
+          showMessage('Registration successful. Redirecting to login...');
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1400);
+        },
+        error(xhr) {
+          const data = xhr.responseJSON || {};
+          showMessage(data.message || data.error || 'Registration failed', 'error');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

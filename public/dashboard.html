@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bookverse Admin Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body { padding: 20px; }
+    .dashboard-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 24px; }
+    .card { background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 10px 20px rgba(0,0,0,.08); }
+    .card h2 { margin: 0 0 12px; font-size: 1.2rem; }
+    .table-block { width: 100%; overflow-x:auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #eee; text-align: left; }
+    th { background: #f7f7f9; }
+    .message { padding: 14px 18px; border-radius: 14px; background: #fff4f0; color: #7c2d12; margin-top: 18px; display: none; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <div class="dashboard-header">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p>Overview of sales, delivery areas, and best-selling items.</p>
+    </div>
+    <div class="button-row">
+      <button class="button button-secondary" onclick="location.href='/admin'">Back to Admin</button>
+      <button class="button button-secondary" onclick="location.href='/'">Open Store</button>
+    </div>
+  </div>
+
+  <div id="dashboardMessage" class="message"></div>
+  <div id="dashboardGrid" class="dashboard-grid"></div>
+
+  <script>
+    function getToken() {
+      return localStorage.getItem('bookverseToken');
+    }
+
+    function getUser() {
+      const raw = localStorage.getItem('bookverseUser');
+      try {
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function redirectToLogin() {
+      window.location.href = '/login';
+    }
+
+    function showMessage(text) {
+      const msg = document.getElementById('dashboardMessage');
+      msg.textContent = text;
+      msg.style.display = 'block';
+    }
+
+    function hideMessage() {
+      const msg = document.getElementById('dashboardMessage');
+      msg.style.display = 'none';
+    }
+
+    function formatCurrency(value) {
+      return '₱' + Number(value || 0).toFixed(2);
+    }
+
+    function ensureAdminAccess() {
+      const token = getToken();
+      const user = getUser();
+      if (!token || !user || user.role !== 'admin') {
+        localStorage.removeItem('bookverseToken');
+        localStorage.removeItem('bookverseUser');
+        redirectToLogin();
+        return false;
+      }
+      return true;
+    }
+
+    async function fetchData(url) {
+      const token = getToken();
+      if (!token) {
+        redirectToLogin();
+        return null;
+      }
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('bookverseToken');
+          localStorage.removeItem('bookverseUser');
+          redirectToLogin();
+          return null;
+        }
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || res.statusText || 'Unable to load data');
+      }
+      return res.json();
+    }
+
+    function renderTable(title, headers, rows, rowMapper) {
+      return `
+        <div class="card">
+          <h2>${title}</h2>
+          <div class="table-block">
+            <table>
+              <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+              <tbody>${rows.map(rowMapper).join('')}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadDashboard() {
+      if (!ensureAdminAccess()) return;
+
+      hideMessage();
+      const grid = document.getElementById('dashboardGrid');
+      grid.innerHTML = '<div class="card"><p>Loading dashboard...</p></div>';
+
+      try {
+        const [sales, areas, items] = await Promise.all([
+          fetchData('/api/v1/sales-chart'),
+          fetchData('/api/v1/address-chart'),
+          fetchData('/api/v1/items-chart')
+        ]);
+
+        const salesRows = sales.rows || [];
+        const areaRows = areas.rows || [];
+        const itemRows = items.rows || [];
+
+        grid.innerHTML = [
+          renderTable('Monthly Sales', ['Month', 'Total'], salesRows.slice(0, 6), row => `<tr><td>${row.month || 'N/A'}</td><td>${formatCurrency(row.total)}</td></tr>`),
+          renderTable('Top Delivery Areas', ['Address', 'Orders'], areaRows.slice(0, 6), row => `<tr><td>${row.addressline || 'N/A'}</td><td>${row.total || 0}</td></tr>`),
+          renderTable('Best Selling Items', ['Item', 'Qty Sold'], itemRows.slice(0, 6), row => `<tr><td>${row.items || 'N/A'}</td><td>${row.total || 0}</td></tr>`)
+        ].join('');
+      } catch (err) {
+        grid.innerHTML = '';
+        showMessage(err.message || 'Unable to load dashboard');
+      }
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

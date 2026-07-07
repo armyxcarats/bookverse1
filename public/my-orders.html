@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Orders</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body { padding: 20px; background: #f5f5f5; }
+    .my-orders-page { max-width: 1100px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .header h1 { margin: 0; }
+    .order-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 16px; }
+    .order-header h3 { margin: 0; }
+    .order-meta { display: flex; gap: 24px; font-size: 0.9rem; color: #666; margin-bottom: 16px; flex-wrap: wrap; }
+    .order-meta-item { display: flex; flex-direction: column; }
+    .order-meta-label { font-weight: 600; color: #333; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-shipping { background: #cfe2ff; color: #084298; }
+    .status-on-delivery { background: #d1ecf1; color: #0c5460; }
+    .status-delivered { background: #d4edda; color: #155724; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    .items-section { margin-bottom: 16px; }
+    .items-section h4 { margin: 0 0 12px; color: #333; }
+    .item-row { display: flex; gap: 12px; padding: 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; align-items: flex-start; }
+    .item-image { width: 80px; height: 100px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: #f0f0f0; }
+    .item-details { flex: 1; }
+    .item-title { font-weight: 600; margin: 0 0 4px; }
+    .item-meta { font-size: 0.9rem; color: #666; }
+    .payment-summary { background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 12px; }
+    .payment-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .payment-row.total { border-top: 1px solid #ddd; padding-top: 6px; font-weight: 600; color: #333; }
+    .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+    .back-link { display: inline-block; margin-bottom: 12px; color: #2c3e50; text-decoration: none; }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="my-orders-page">
+    <div class="header">
+      <div>
+        <a href="/" class="back-link">← Back to Store</a>
+        <h1>My Orders</h1>
+        <p>Track your orders and delivery status</p>
+      </div>
+      <div>
+        <a href="/cart" class="button button-secondary">Back to Cart</a>
+      </div>
+    </div>
+    <div id="ordersContainer" style="min-height: 200px;"></div>
+    <div id="orderMessage" class="message" style="display:none; margin-bottom: 20px;"></div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script>
+    const token = localStorage.getItem('bookverseToken');
+    const user = localStorage.getItem('bookverseUser') ? JSON.parse(localStorage.getItem('bookverseUser')) : null;
+
+    function showMessage(text, type = 'info') {
+      const el = document.getElementById('orderMessage');
+      el.textContent = text;
+      el.className = type === 'error' ? 'message error' : 'message';
+      el.style.display = 'block';
+    }
+
+    function getStatusBadgeClass(status) {
+      const statusLower = (status || 'pending').toLowerCase();
+      if (statusLower === 'delivered') return 'status-delivered';
+      if (statusLower === 'on delivery') return 'status-on-delivery';
+      if (statusLower === 'shipping') return 'status-shipping';
+      if (statusLower === 'cancelled') return 'status-cancelled';
+      return 'status-pending';
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function estimateArrival(dateShipped) {
+      if (!dateShipped) return 'N/A';
+      const date = new Date(dateShipped);
+      date.setDate(date.getDate() + 5); // Add 5 days for delivery estimate
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    async function saveDeliveryDetails(orderId) {
+      const addressInput = document.getElementById(`delivery-address-${orderId}`);
+      const zipcodeInput = document.getElementById(`delivery-zipcode-${orderId}`);
+      const phoneInput = document.getElementById(`delivery-phone-${orderId}`);
+      const messageEl = document.getElementById(`delivery-message-${orderId}`);
+
+      if (!addressInput || !zipcodeInput || !phoneInput || !messageEl) return;
+      const address = addressInput.value.trim();
+      const zipcode = zipcodeInput.value.trim();
+      const phone = phoneInput.value.trim();
+
+      if (!address || !zipcode || !phone) {
+        messageEl.textContent = 'All fields are required.';
+        messageEl.className = 'message error';
+        messageEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v1/orders/${orderId}/shipping`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            shipping_address: address,
+            shipping_zipcode: zipcode,
+            shipping_phone: phone
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          messageEl.textContent = data.error || 'Unable to save delivery details.';
+          messageEl.className = 'message error';
+          messageEl.style.display = 'block';
+          return;
+        }
+
+        messageEl.textContent = 'Delivery details saved.';
+        messageEl.className = 'message';
+        messageEl.style.display = 'block';
+        loadMyOrders();
+      } catch (err) {
+        messageEl.textContent = 'Unable to save delivery details. Try again later.';
+        messageEl.className = 'message error';
+        messageEl.style.display = 'block';
+      }
+    }
+
+    async function loadMyOrders() {
+      if (!token || !user) {
+        window.location.href = '/login';
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/v1/orders', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          const body = await response.json();
+          showMessage(body.error || 'Unable to load orders.', 'error');
+          return;
+        }
+
+        const allOrders = await response.json();
+        
+        if (!Array.isArray(allOrders) || allOrders.length === 0) {
+          document.getElementById('ordersContainer').innerHTML = '<div class="empty-state"><p>You have no orders yet.</p><p><a href="/" class="button button-primary">Start Shopping</a></p></div>';
+          return;
+        }
+
+        // Fetch detailed order items
+        const ordersWithItems = await Promise.all(allOrders.map(async order => {
+          try {
+            const itemRes = await fetch(`/api/v1/orders/${order.order_id}/items`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (itemRes.ok) {
+              const items = await itemRes.json();
+              order.order_items = items;
+            } else {
+              order.order_items = [];
+            }
+          } catch (e) {
+            order.order_items = [];
+          }
+          return order;
+        }));
+
+        renderOrders(ordersWithItems);
+      } catch (error) {
+        showMessage('Error loading orders.', 'error');
+        console.error(error);
+      }
+    }
+
+    function renderOrders(orders) {
+      const container = document.getElementById('ordersContainer');
+      
+      if (!orders || orders.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>You have no orders yet.</p></div>';
+        return;
+      }
+
+      const html = orders.map(order => {
+        const itemsHtml = (order.order_items || []).map(item => `
+          <div class="item-row">
+            <img src="${item.img_path ? (item.img_path.startsWith('http') || item.img_path.startsWith('/') ? item.img_path : '/' + item.img_path) : 'https://via.placeholder.com/80'}" alt="${item.description || 'Item'}" class="item-image" onerror="this.src='https://via.placeholder.com/80';" />
+            <div class="item-details">
+              <div class="item-title">${item.description || 'Unknown Item'}</div>
+              <div class="item-meta">Quantity: <strong>${item.quantity || 1}</strong></div>
+              <div class="item-meta">Price: <strong>₱${Number(item.sell_price || 0).toFixed(2)}</strong></div>
+            </div>
+          </div>
+        `).join('');
+
+        const totalAmount = order.total_amount || 0;
+        const arrivalDate = estimateArrival(order.date_shipped);
+
+        return `
+          <div class="order-card">
+            <div class="order-header">
+              <div>
+                <h3>Order #${order.order_id}</h3>
+              </div>
+              <div>
+                <span class="status-badge ${getStatusBadgeClass(order.status)}">${order.status || 'pending'}</span>
+              </div>
+            </div>
+            
+            <div class="order-meta">
+              <div class="order-meta-item">
+                <span class="order-meta-label">Placed</span>
+                <span>${formatDate(order.date_placed)}</span>
+              </div>
+              <div class="order-meta-item">
+                <span class="order-meta-label">Est. Arrival</span>
+                <span>${arrivalDate}</span>
+              </div>
+              <div class="order-meta-item">
+                <span class="order-meta-label">Shipping Address</span>
+                <span>${order.shipping_address || 'N/A'}</span>
+              </div>
+              <div class="order-meta-item">
+                <span class="order-meta-label">Zip Code</span>
+                <span>${order.shipping_zipcode || 'N/A'}</span>
+              </div>
+              <div class="order-meta-item">
+                <span class="order-meta-label">Phone</span>
+                <span>${order.shipping_phone || 'N/A'}</span>
+              </div>
+            </div>
+
+            ${(!order.shipping_address || !order.shipping_zipcode || !order.shipping_phone) ? `
+            <div class="delivery-form" id="delivery-form-${order.order_id}" style="margin-top:16px; padding:16px; background:#fafafa; border:1px solid #eee; border-radius:12px;">
+              <h4 style="margin:0 0 12px;">Add delivery details</h4>
+              <div style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px;">
+                <input type="text" id="delivery-address-${order.order_id}" placeholder="Shipping address" style="padding:12px; border:1px solid #ddd; border-radius:10px;" />
+                <input type="text" id="delivery-zipcode-${order.order_id}" placeholder="Zip code" style="padding:12px; border:1px solid #ddd; border-radius:10px;" />
+                <input type="tel" id="delivery-phone-${order.order_id}" placeholder="Phone number" style="padding:12px; border:1px solid #ddd; border-radius:10px;" />
+              </div>
+              <button class="button button-primary" type="button" onclick="saveDeliveryDetails(${order.order_id})">Save delivery details</button>
+              <div id="delivery-message-${order.order_id}" class="message" style="display:none; margin-top:12px;"></div>
+            </div>
+            ` : ''}
+
+            <div class="items-section">
+              <h4>Items (${(order.order_items || []).length})</h4>
+              ${itemsHtml || '<p style="color: #999;">No items found.</p>'}
+            </div>
+
+            <div class="payment-summary">
+              <div class="payment-row">
+                <span>Subtotal:</span>
+                <span>₱${Number(totalAmount || 0).toFixed(2)}</span>
+              </div>
+              <div class="payment-row">
+                <span>Shipping:</span>
+                <span>₱${Number(order.shipping || 0).toFixed(2)}</span>
+              </div>
+              <div class="payment-row total">
+                <span>Amount Paid:</span>
+                <span>₱${Number(totalAmount || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    // Load orders on page load
+    loadMyOrders();
+  </script>
+</body>
+</html>

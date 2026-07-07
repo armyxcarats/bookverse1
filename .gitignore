@@ -1,0 +1,7 @@
+/node_modules/
+# production
+# misc
+/config/.env
+/.env
+/token.txt
+/images

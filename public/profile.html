@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Account - Bookverse</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .profile-page { max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    .profile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .profile-card { background: #f9f9f9; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 30px; }
+    .profile-avatar { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
+    .avatar-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #8b3a3a; margin-bottom: 12px; background: #f0f0f0; }
+    .avatar-placeholder { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #8b3a3a, #c44545); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px; margin-bottom: 12px; border: 3px solid #8b3a3a; }
+    .upload-btn { padding: 8px 16px; background: #8b3a3a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .upload-btn:hover { background: #a84848; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.12); border-radius: 6px; font-size: 14px; font-family: inherit; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-row-full { grid-column: 1 / -1; }
+    .message { margin-bottom: 16px; padding: 12px; border-radius: 6px; font-size: 14px; }
+    .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .button-group { display: flex; gap: 12px; margin-top: 24px; justify-content: center; }
+    .button-group button { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 600; }
+    .btn-save { background: #8b3a3a; color: white; }
+    .btn-save:hover { background: #a84848; }
+    .btn-cancel { background: #e0e0e0; color: #333; }
+    .btn-cancel:hover { background: #d0d0d0; }
+    .btn-edit { background: #8b3a3a; color: white; padding: 8px 16px; }
+    .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .info-label { font-weight: 600; color: #555; }
+    .info-value { color: #333; }
+    .hidden { display: none; }
+    #profilePhotoInput { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="main-header">
+      <div class="brand">Bookverse</div>
+      <div class="user-actions" id="userActions"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="profile-page">
+      <div class="profile-header">
+        <h1>My Account</h1>
+        <a href="/" class="button button-secondary">Back to Store</a>
+      </div>
+      
+      <div class="profile-card">
+        <div id="message" class="message hidden"></div>
+
+        <!-- View Mode -->
+        <div id="viewMode">
+          <div class="profile-avatar">
+            <img id="avatarDisplay" class="avatar-img hidden" alt="Profile photo" />
+            <div id="avatarPlaceholder" class="avatar-placeholder">👤</div>
+          </div>
+          
+          <div id="profileInfo"></div>
+          
+          <div class="button-group">
+            <button id="editBtn" class="btn-edit">Edit Profile</button>
+          </div>
+        </div>
+
+        <!-- Edit Mode -->
+        <div id="editMode" class="hidden">
+          <input type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/jpg" />
+          
+          <div class="profile-avatar">
+            <img id="avatarEditDisplay" class="avatar-img hidden" alt="Profile photo" />
+            <div id="avatarEditPlaceholder" class="avatar-placeholder">👤</div>
+            <button class="upload-btn" onclick="document.getElementById('profilePhotoInput').click()">Upload Photo</button>
+          </div>
+
+          <form id="editForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="fname">First Name</label>
+                <input type="text" id="fname" name="fname" />
+              </div>
+              <div class="form-group">
+                <label for="lname">Last Name</label>
+                <input type="text" id="lname" name="lname" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" readonly style="background:#f0f0f0; cursor:not-allowed;" />
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Phone</label>
+              <input type="tel" id="phone" name="phone" />
+            </div>
+
+            <div class="form-group">
+              <label for="addressline">Address</label>
+              <textarea id="addressline" name="addressline"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="zipcode">Zip Code</label>
+              <input type="text" id="zipcode" name="zipcode" />
+            </div>
+
+            <div class="button-group">
+              <button type="submit" class="btn-save">Save Changes</button>
+              <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+            </div>
+          </form>
+
+            <hr style="margin:18px 0;" />
+            <h3>Change Password</h3>
+            <form id="changePasswordForm" style="margin-top:12px;">
+              <div class="form-group">
+                <label for="currentPassword">Current Password</label>
+                <input id="currentPassword" type="password" />
+              </div>
+              <div class="form-group">
+                <label for="newPassword">New Password</label>
+                <input id="newPassword" type="password" />
+              </div>
+              <div class="form-group">
+                <label for="confirmNewPassword">Confirm New Password</label>
+                <input id="confirmNewPassword" type="password" />
+              </div>
+              <div class="button-group">
+                <button id="changePassBtn" type="submit" class="btn-save">Change Password</button>
+                <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+              </div>
+            </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentUser = null;
+    let uploadedPhotoFile = null;
+
+    function getStoredUser() {
+      const raw = localStorage.getItem('bookverseUser');
+      return raw ? JSON.parse(raw) : null;
+    }
+
+    function getToken() {
+      return localStorage.getItem('bookverseToken');
+    }
+
+    function showMessage(text, type = 'success') {
+      const msgEl = document.getElementById('message');
+      msgEl.textContent = text;
+      msgEl.className = `message ${type}`;
+      msgEl.classList.remove('hidden');
+      if (type === 'success') {
+        setTimeout(() => msgEl.classList.add('hidden'), 3000);
+      }
+    }
+
+    function renderUserActions() {
+      const userActions = document.getElementById('userActions');
+      const user = getStoredUser();
+      if (!user) {
+        userActions.innerHTML = '<a href="/login">Login/Register</a>';
+        return;
+      }
+
+      const adminLink = user.role === 'admin' ? '<a href="/admin">Admin</a>' : '';
+      userActions.innerHTML = `
+        <span class="user-greeting">${user.name}</span>
+        <a href="/">Store</a>
+        ${adminLink}
+        <a href="#" id="logoutButton">Logout</a>
+      `;
+
+      document.getElementById('logoutButton').addEventListener('click', (event) => {
+        event.preventDefault();
+        localStorage.removeItem('bookverseToken');
+        localStorage.removeItem('bookverseUser');
+        window.location.href = '/login';
+      });
+    }
+
+    function renderViewMode() {
+      const profileInfo = document.getElementById('profileInfo');
+      const user = currentUser;
+      if (!user) {
+        profileInfo.innerHTML = '<p>Please log in.</p>';
+        return;
+      }
+
+      const customer = user.customer || {};
+      const photo = customer.image_path;
+      
+      if (photo) {
+        document.getElementById('avatarDisplay').src = photo.startsWith('http') || photo.startsWith('/') ? photo : '/' + photo;
+        document.getElementById('avatarDisplay').classList.remove('hidden');
+        document.getElementById('avatarPlaceholder').classList.add('hidden');
+      }
+
+      profileInfo.innerHTML = `
+        <div class="info-row"><span class="info-label">Name:</span><span class="info-value">${user.name}</span></div>
+        <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${user.email}</span></div>
+        <div class="info-row"><span class="info-label">First Name:</span><span class="info-value">${customer.fname || '-'}</span></div>
+        <div class="info-row"><span class="info-label">Last Name:</span><span class="info-value">${customer.lname || '-'}</span></div>
+        <div class="info-row"><span class="info-label">Phone:</span><span class="info-value">${customer.phone || '-'}</span></div>
+        <div class="info-row"><span class="info-label">Address:</span><span class="info-value">${customer.addressline || '-'}</span></div>
+        <div class="info-row"><span class="info-label">Zip Code:</span><span class="info-value">${customer.zipcode || '-'}</span></div>
+      `;
+    }
+
+    function populateEditForm() {
+      const user = currentUser;
+      const customer = user.customer || {};
+      
+      document.getElementById('fname').value = customer.fname || '';
+      document.getElementById('lname').value = customer.lname || '';
+      document.getElementById('email').value = user.email || '';
+      document.getElementById('phone').value = customer.phone || '';
+      document.getElementById('addressline').value = customer.addressline || '';
+      document.getElementById('zipcode').value = customer.zipcode || '';
+
+      if (customer.image_path) {
+        const photoUrl = customer.image_path.startsWith('http') || customer.image_path.startsWith('/') ? customer.image_path : '/' + customer.image_path;
+        document.getElementById('avatarEditDisplay').src = photoUrl;
+        document.getElementById('avatarEditDisplay').classList.remove('hidden');
+        document.getElementById('avatarEditPlaceholder').classList.add('hidden');
+      }
+    }
+
+    function showEditMode() {
+      document.getElementById('viewMode').classList.add('hidden');
+      document.getElementById('editMode').classList.remove('hidden');
+      populateEditForm();
+    }
+
+    function cancelEdit() {
+      document.getElementById('viewMode').classList.remove('hidden');
+      document.getElementById('editMode').classList.add('hidden');
+      uploadedPhotoFile = null;
+    }
+
+    async function saveProfile(e) {
+      e.preventDefault();
+      const token = getToken();
+      if (!token) {
+        showMessage('Please log in first.', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('userId', currentUser.id);
+      formData.append('fname', document.getElementById('fname').value);
+      formData.append('lname', document.getElementById('lname').value);
+      formData.append('phone', document.getElementById('phone').value);
+      formData.append('addressline', document.getElementById('addressline').value);
+      formData.append('zipcode', document.getElementById('zipcode').value);
+      
+      if (uploadedPhotoFile) {
+        formData.append('image', uploadedPhotoFile);
+      }
+
+      try {
+        const res = await fetch('/api/v1/update-profile', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showMessage(data.error || data.message || 'Update failed', 'error');
+          return;
+        }
+
+        // Update localStorage with new user data
+        const updatedUser = { ...currentUser, customer: data.customer || currentUser.customer };
+        localStorage.setItem('bookverseUser', JSON.stringify(updatedUser));
+        currentUser = updatedUser;
+
+        showMessage('Profile updated successfully!', 'success');
+        uploadedPhotoFile = null;
+        setTimeout(cancelEdit, 1500);
+      } catch (err) {
+        showMessage('Error updating profile: ' + err.message, 'error');
+      }
+    }
+
+    document.getElementById('editBtn').addEventListener('click', showEditMode);
+    document.getElementById('editForm').addEventListener('submit', saveProfile);
+    document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = getToken();
+      if (!token) { showMessage('Please log in first.', 'error'); return; }
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('confirmNewPassword').value;
+      if (!currentPassword || !newPassword) { showMessage('Please provide both current and new password.', 'error'); return; }
+      if (newPassword !== confirm) { showMessage('New passwords do not match.', 'error'); return; }
+      if (newPassword.length < 6 || !/\d/.test(newPassword)) { showMessage('Password must be at least 6 characters and include a number.', 'error'); return; }
+
+      try {
+        const res = await fetch('/api/v1/change-password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const body = await res.json();
+        if (!res.ok) { showMessage(body.error || 'Unable to change password', 'error'); return; }
+        showMessage('Password changed successfully.');
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmNewPassword').value = '';
+      } catch (err) {
+        showMessage('Error changing password: ' + err.message, 'error');
+      }
+    });
+    
+    document.getElementById('profilePhotoInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        uploadedPhotoFile = file;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          document.getElementById('avatarEditDisplay').src = evt.target.result;
+          document.getElementById('avatarEditDisplay').classList.remove('hidden');
+          document.getElementById('avatarEditPlaceholder').classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Initialize
+    currentUser = getStoredUser();
+    if (!currentUser) {
+      document.querySelector('.profile-page').innerHTML = '<p style="text-align:center; margin-top:40px;">Please <a href="/login">log in</a> to view your profile.</p>';
+    } else {
+      renderUserActions();
+      renderViewMode();
+    }
+  </script>
+</body>
+</html>

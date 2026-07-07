@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bookverse Orders</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body { padding: 20px; }
+    .orders-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .orders-header h1 { margin: 0; }
+    .message { margin-top: 12px; padding: 12px; border-radius: 12px; background: #f7eef0; color: #3d080d; }
+  </style>
+</head>
+<body>
+  <div class="orders-header">
+    <div>
+      <h1>Order Management</h1>
+      <p>View all orders and manage transactions from the admin panel.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button id="refreshOrders" class="button button-secondary">Refresh</button>
+      <a href="/" class="button button-secondary">Store</a>
+    </div>
+  </div>
+  <table id="ordersTable" class="display" style="width:100%"></table>
+  <div id="orderMessage" class="message" style="display:none;"></div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script>
+    let table;
+    const token = localStorage.getItem('bookverseToken');
+    const user = localStorage.getItem('bookverseUser') ? JSON.parse(localStorage.getItem('bookverseUser')) : null;
+
+    // Admin check: only admin can access this page
+    async function checkAdmin() {
+      if (!token || !user) {
+        window.location.href = '/';
+        return false;
+      }
+      try {
+        await $.ajax({
+          url: '/api/v1/orders',
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` },
+          dataType: 'json'
+        });
+      } catch (xhr) {
+        if (xhr.status === 403) {
+          window.location.href = '/';
+          return false;
+        }
+        window.location.href = '/';
+        return false;
+      }
+      return true;
+    }
+
+    function showMessage(text) {
+      $('#orderMessage').text(text).show();
+    }
+
+    async function updateOrderStatus(orderId, status) {
+      try {
+        await $.ajax({
+          url: `/api/v1/orders/${orderId}/status`,
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` },
+          contentType: 'application/json',
+          data: JSON.stringify({ status }),
+          dataType: 'json'
+        });
+        showMessage(`Order #${orderId} updated to ${status}. Receipt email sent.`);
+        loadOrders();
+      } catch (xhr) {
+        const body = xhr.responseJSON || {};
+        showMessage(body.error || 'Unable to update order.');
+      }
+    }
+
+    async function loadOrders() {
+      if (!token) {
+        showMessage('Please login first.');
+        return;
+      }
+
+      let orders;
+      try {
+        orders = await $.ajax({
+          url: '/api/v1/orders',
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` },
+          dataType: 'json'
+        });
+      } catch (xhr) {
+        const body = xhr.responseJSON || {};
+        showMessage(body.error || 'Unable to load orders.');
+        return;
+      }
+
+      if (!table) {
+        table = $('#ordersTable').DataTable({
+          data: orders,
+          columns: [
+            { title: 'Order #', data: 'order_id' },
+            { title: 'Customer', data: 'customer_name' },
+            { title: 'Email', data: 'customer_email' },
+            { title: 'Placed', data: 'date_placed' },
+            { title: 'Shipped', data: 'date_shipped' },
+            { title: 'Status', data: 'status' },
+            { title: 'Address', data: 'shipping_address' },
+            { title: 'Zip Code', data: 'shipping_zipcode' },
+            { title: 'Items', data: 'items' },
+            { title: 'Total', data: 'total_amount', render: v => v ? '$' + Number(v).toFixed(2) : '$0.00' },
+            { title: 'Actions', data: null, orderable: false, render: (data, type, row) => {
+                return `
+                  <select class="status-select" data-order-id="${row.order_id}">
+                    <option value="pending" ${row.status === 'pending' ? 'selected' : ''}>pending</option>
+                    <option value="shipping" ${row.status === 'shipping' ? 'selected' : ''}>shipping</option>
+                    <option value="on delivery" ${row.status === 'on delivery' ? 'selected' : ''}>on delivery</option>
+                    <option value="delivered" ${row.status === 'delivered' ? 'selected' : ''}>delivered</option>
+                    <option value="cancelled" ${row.status === 'cancelled' ? 'selected' : ''}>cancelled</option>
+                  </select>
+                  <button class="delete-order">Delete</button>
+                `;
+              }
+            }
+          ]
+        });
+
+        $('#ordersTable tbody').on('change', 'select.status-select', function() {
+          const orderId = $(this).data('order-id');
+          const status = $(this).val();
+          updateOrderStatus(orderId, status);
+        });
+
+        $('#ordersTable tbody').on('click', 'button.delete-order', async function() {
+          const row = table.row($(this).parents('tr')).data();
+          if (!confirm('Delete order #' + row.order_id + '?')) return;
+
+          try {
+            await $.ajax({
+              url: '/api/v1/orders/' + row.order_id,
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            showMessage('Order deleted');
+            loadOrders();
+          } catch (xhr) {
+            const body = xhr.responseJSON || {};
+            showMessage(body.error || 'Delete failed');
+          }
+        });
+      } else {
+        table.clear().rows.add(orders).draw();
+      }
+    }
+
+    checkAdmin().then(isAdmin => {
+      if (isAdmin) loadOrders();
+    });
+
+    $('#refreshOrders').on('click', () => loadOrders());
+  </script>
+</body>
+</html>

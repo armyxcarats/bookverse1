@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bookverse Store</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .genre-group { margin-bottom: 36px; }
+    .genre-group-title { margin: 0 0 16px; font-size: 1.5rem; color: #432222; }
+    .book-card-genre { color: #7a5c3f; font-size: 0.9rem; margin: 8px 0; }
+    .book-card { cursor: pointer; }
+    .book-preview-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.97); z-index: 50; }
+    .book-preview-modal.open { display: flex; }
+    .book-preview-card { width: min(840px, calc(100% - 40px)); background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.16); display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .book-preview-card img { width: 100%; height: 100%; object-fit: cover; }
+    .book-preview-content { padding: 28px; display: flex; flex-direction: column; gap: 16px; background: #fff; }
+    .book-preview-close { position: absolute; top: 20px; right: 24px; padding: 12px 16px; border-radius: 999px; border: none; background: white; cursor: pointer; font-size: 1rem; }
+    .book-preview-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; }
+    .book-preview-description { line-height: 1.7; color: #333; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="main-header">
+      <div class="brand">Bookverse</div>
+      <div class="search-bar">
+        <input type="text" placeholder="Search Bookverse" aria-label="Search books" />
+        <button class="search-button">🔍</button>
+      </div>
+      <div class="user-actions" id="userActions">
+        <a href="/login">Login/Register</a>
+        <a href="#">Wishlist</a>
+        <a href="/cart" class="cart">Cart <span id="cartCount">0</span></a>
+      </div>
+    </div>
+
+    <nav class="category-nav">
+      <a href="#" class="nav-link active" data-section="books">BOOKS</a>
+      <a href="#" class="nav-link" data-section="bestsellers">BESTSELLERS</a>
+      <a href="#" class="nav-link" data-section="collections">COLLECTIONS</a>
+      <a href="#" class="nav-link" data-section="book-reviews">BOOK REVIEWS</a>
+      <a href="#" class="nav-link" data-section="new-section">NEW!</a>
+      <a href="#" class="nav-link" data-section="preorders">PRE-ORDERS</a>
+      <a href="#" class="nav-link" data-section="sale">SALE</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="trending-section" id="collections">
+      <div class="trending-header">
+        <h2>Explore Bookverse</h2>
+        <button id="load-books" class="button button-secondary">Refresh</button>
+      </div>
+      <div id="books" class="book-grid"></div>
+    </section>
+
+    <section class="trending-section hidden-section" id="bestsellers">
+      <div class="trending-header">
+        <h2>Best Sellers</h2>
+      </div>
+      <p class="section-description">These are the books customers have bought the most. If a title appears here, it means it has been chosen often by users.</p>
+      <div id="bestSellers" class="book-grid"></div>
+    </section>
+
+    <section class="trending-section hidden-section" id="book-reviews">
+      <div class="trending-header">
+        <h2>Book Reviews</h2>
+      </div>
+      <p class="section-description">Once a book has been ordered and delivered, customers can leave a review. Reviews may include a 1–5 star rating or a written comment about the reading experience.</p>
+    </section>
+
+    <section class="trending-section hidden-section" id="new-section">
+      <div class="trending-header">
+        <h2>New!</h2>
+      </div>
+      <p class="section-description">New arrivals appear here when the admin adds a new book. These titles also show up in the main collection so you can discover the latest arrivals across the site.</p>
+      <div id="newArrivals" class="book-grid"></div>
+    </section>
+
+    <section class="trending-section hidden-section" id="sale">
+      <div class="trending-header">
+        <h2>Sale</h2>
+      </div>
+      <p class="section-description">Selected books are on sale now with discounts like 25% off. These special prices are applied to popular and newly selected titles.</p>
+      <div id="saleBooks" class="book-grid"></div>
+    </section>
+
+    <section class="trending-section hidden-section" id="preorders">
+      <div class="trending-header">
+        <h2>Pre-Orders</h2>
+      </div>
+      <p class="section-description">Upcoming titles available for pre-order will appear here once added by the admin.</p>
+    </section>
+  </main>
+
+  <div id="bookPreviewModal" class="book-preview-modal" aria-hidden="true">
+    <div class="book-preview-card">
+      <img id="previewImage" src="" alt="Book preview image" />
+      <div class="book-preview-content">
+        <button class="book-preview-close" type="button" onclick="closeBookPreview()">✕</button>
+        <h2 id="previewTitle"></h2>
+        <div id="previewGenre" class="book-card-genre"></div>
+        <div id="previewAuthor" style="font-weight:600;color:#5b4a3d;"></div>
+        <div id="previewPrice" style="font-size:1.3rem;font-weight:700;color:#2f2f2f;"></div>
+        <p id="previewDescription" class="book-preview-description"></p>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
+          <label style="display:flex; align-items:center; gap:8px; margin:0;">Qty:<input id="previewQuantity" type="number" min="1" value="1" style="width:64px; padding:8px; border-radius:10px; border:1px solid #ddd;" /></label>
+          <div id="previewStockInfo" style="font-size:0.95rem; color:#555;">Available: 1+</div>
+        </div>
+        <div id="previewQuantityError" style="color:#b3312c; font-size:0.95rem; display:none; margin-top:8px;"></div>
+        <div class="book-preview-buttons">
+          <button class="button button-primary" id="previewAddBtn" type="button">Add to cart</button>
+          <button class="button button-secondary" type="button" onclick="closeBookPreview()">Back to shopping</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side cart panel -->
+  <aside id="sideCart" class="side-cart" aria-hidden="true">
+    <div class="side-cart-header">
+      <h3>Your Cart</h3>
+      <button id="closeSideCart" class="side-cart-close" aria-label="Close cart">✕</button>
+    </div>
+    <div id="sideCartItems" class="side-cart-items">
+      <div class="cart-empty">Your cart is empty.</div>
+    </div>
+    <div class="side-cart-footer">
+      <div class="side-cart-total">Total: <span id="sideCartTotal">₱0.00</span></div>
+      <div class="side-cart-actions">
+        <a href="/cart" class="button button-secondary">View cart</a>
+        <button id="checkoutBtn" class="button button-primary">Checkout</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Toast notification -->
+  <div id="cartToast" class="cart-toast hidden" role="status" aria-live="polite"></div>
+
+  <script>
+    const booksContainer = document.getElementById('books');
+    const bestSellersContainer = document.getElementById('bestSellers');
+    const newArrivalsContainer = document.getElementById('newArrivals');
+    const saleBooksContainer = document.getElementById('saleBooks');
+    const loadBooksButton = document.getElementById('load-books');
+    const searchInput = document.querySelector('.search-bar input');
+    const searchButton = document.querySelector('.search-button');
+    let loadedItems = [];
+
+    const sampleBooks = [
+      { id: 1, title: 'The Secret Chapter', author: 'A. Developer', genre: 'Fiction', sell_price: 24.99, sale: 25, description_text: 'A mysterious novel about a hidden manuscript that changes the life of a young reader. It blends humor, suspense, and subtle lessons for anyone who enjoys thoughtful fiction.', img_path: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80', pages: 312, popularity: 85, isNew: false, isDelivered: true },
+      { id: 2, title: 'Node.js in Action', author: 'M. Johnson', genre: 'Technology', sell_price: 29.50, description_text: 'This hands-on guide walks you through building modern Node.js applications with real-world examples and best practices. Great for developers who want to make server-side JavaScript powerful and productive.', img_path: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=800&q=80', pages: 396, popularity: 93, isNew: true, isDelivered: false },
+      { id: 3, title: 'Design Patterns for Web Apps', author: 'K. Smith', genre: 'Technology', sell_price: 21.00, sale: 25, description_text: 'A practical introduction to design patterns that help you build scalable and maintainable web applications. The book explains each pattern with code samples and real architecture advice.', img_path: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80', pages: 288, popularity: 78, isNew: false, isDelivered: true },
+      { id: 4, title: 'MySQL & Sequelize Guide', author: 'R. Patel', genre: 'Technology', sell_price: 26.75, description_text: 'A complete walkthrough for building Node.js apps with MySQL using Sequelize ORM. It covers schema modeling, associations, queries, and deployment with clear examples.', img_path: 'https://images.unsplash.com/photo-1517430816045-df4b7de45f8f?auto=format&fit=crop&w=800&q=80', pages: 256, popularity: 65, isNew: true, isDelivered: true },
+      { id: 5, title: 'E-commerce UX Essentials', author: 'T. Cooper', genre: 'Business', sell_price: 18.90, description_text: 'A practical resource for designing great online shopping experiences. Learn how product pages, checkout flows, and search interactions boost sales and customer satisfaction.', img_path: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=800&q=80', pages: 224, popularity: 90, isNew: false, isDelivered: true },
+      { id: 6, title: 'Practical API Design', author: 'L. Monroe', genre: 'Business', sell_price: 32.00, description_text: 'A thoughtful book on designing clean APIs for modern apps. It explains principles for reliable endpoints, versioning, error handling, and developer-friendly documentation.', img_path: 'https://images.unsplash.com/photo-1485217988980-11786ced9454?auto=format&fit=crop&w=800&q=80', pages: 340, popularity: 74, isNew: true, isDelivered: false }
+    ];
+
+    const sampleReviews = [
+      { id: 1, bookId: 1, bookTitle: 'The Secret Chapter', rating: 5, comment: 'Loved the storytelling and pacing. Highly recommended for anyone starting a new reading habit.', reviewer: 'Jane' },
+      { id: 2, bookId: 3, bookTitle: 'Design Patterns for Web Apps', rating: 4, comment: 'Helpful examples and clear structure. A solid guide for web developers.', reviewer: 'Mark' }
+    ];
+
+    const reviewForm = document.getElementById('reviewForm');
+    const reviewList = document.getElementById('reviewList');
+    const reviewBookSelect = document.getElementById('reviewBook');
+    const reviewMessageBox = document.getElementById('reviewMessage');
+
+    function getStoredUser() {
+      const raw = localStorage.getItem('bookverseUser');
+      return raw ? JSON.parse(raw) : null;
+    }
+
+    function getCartKey() {
+      const user = getStoredUser();
+      return user && user.id ? `bookverseCart_user_${user.id}` : 'bookverseCart_guest';
+    }
+
+    function getCart() {
+      const raw = localStorage.getItem(getCartKey());
+      return raw ? JSON.parse(raw) : [];
+    }
+
+    function saveCart(cart) {
+      localStorage.setItem(getCartKey(), JSON.stringify(cart));
+      updateCartCount();
+    }
+
+    function updateCartCount() {
+      const cartCount = document.getElementById('cartCount');
+      const cart = getCart();
+      if (cartCount) {
+        cartCount.textContent = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      }
+    }
+
+    function ensureLoggedInForCart() {
+      const user = getStoredUser();
+      if (!user || !user.id) {
+        showMessage('Please login or register before adding items to the cart.', 'error');
+        window.location.href = '/login';
+        return false;
+      }
+      return true;
+    }
+
+    function addToCart(item) {
+      if (!ensureLoggedInForCart()) return;
+
+      const cart = getCart();
+      const id = item.item_id || item.id;
+      const qty = Number(item.quantity) && Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+      const existing = cart.find(c => c.item_id == id);
+      // Use sale price when item is on sale so user pays the discounted amount
+      const effectivePrice = (item.on_sale && item.sale_price) ? Number(item.sale_price) : (item.sell_price || item.price || 0);
+      const payload = {
+        item_id: id,
+        description: item.description || item.title,
+        sell_price: effectivePrice,
+        original_price: item.sell_price || item.price || 0,
+        img_path: item.img_path || item.image || '',
+        quantity: qty,
+        on_sale: !!item.on_sale,
+        sale_price: item.sale_price || null
+      };
+      if (existing) {
+        existing.quantity = (existing.quantity || 0) + qty;
+      } else {
+        cart.push(payload);
+      }
+      saveCart(cart);
+      showCartToast('Added to cart: ' + payload.description);
+      openSideCart();
+    }
+
+    function renderBookCard(item) {
+      const title = item.description || item.title || 'Untitled book';
+      const author = item.author || item.subtitle || 'Unknown author';
+      const description = item.description_text || 'No description available yet.';
+      const snippet = description.length > 95 ? description.slice(0, 95) + '...' : description;
+      const image = item.img_path || item.image || 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80';
+      const pages = item.pages || item.Stock?.quantity || 'N/A';
+      // Prefer explicit sale properties from the API: `on_sale` and `sale_price`.
+      const isOnSale = item.on_sale && item.sale_price;
+      const displayPriceValue = isOnSale ? Number(item.sale_price) : (item.sell_price ? Number(item.sell_price) : item.price ? Number(item.price) : 0);
+      const displayPrice = displayPriceValue ? `₱${displayPriceValue.toFixed(2)}` : 'Free';
+      const originalPriceValue = item.sell_price ? Number(item.sell_price) : (item.price ? Number(item.price) : 0);
+      const originalPriceHtml = (isOnSale && originalPriceValue) ? `<small style="color:#6b7280; text-decoration:line-through; margin-left:8px;">₱${originalPriceValue.toFixed(2)}</small>` : '';
+      let sale = '';
+      if (isOnSale) {
+        const percent = originalPriceValue ? Math.round((1 - displayPriceValue / originalPriceValue) * 100) : 0;
+        sale = `<span class="book-card-badge">${percent}% OFF</span>`;
+      } else if (item.sale) {
+        sale = `<span class="book-card-badge">${item.sale}% OFF</span>`;
+      }
+      const genreLabel = item.genre ? `<div class="book-card-genre">${item.genre}</div>` : '';
+      const itemData = encodeURIComponent(JSON.stringify(item));
+      return `
+          <article class="book-card" onclick="showBookPreview(JSON.parse(decodeURIComponent('${itemData}')))">
+            <img src="${image}" alt="${title}" />
+            <div class="book-card-body">
+              ${sale}
+              <h3 class="book-card-title">${title}</h3>
+              <p class="book-card-author">${author}</p>
+              ${genreLabel}
+              <p class="book-card-description">${snippet}</p>
+              <div class="book-card-meta"><span>${pages} pages</span><span>⭐ 4.5</span></div>
+              <div style="margin-top:8px; font-weight:700;">${displayPrice}${originalPriceHtml}</div>
+              <div class="book-preview-buttons" style="margin-top: 16px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="button button-primary" type="button" onclick="event.stopPropagation(); addToCart(JSON.parse(decodeURIComponent('${itemData}')))">Add to cart</button>
+              </div>
+            </div>
+          </article>
+        `;
+    }
+
+    function renderBooks(items, targetContainer = booksContainer) {
+      targetContainer.innerHTML = items.map(renderBookCard).join('');
+    }
+
+    function showBookPreview(item) {
+      const title = item.description || item.title || 'Untitled book';
+      const image = item.img_path || item.image || 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80';
+      const author = item.author || item.subtitle || 'Unknown author';
+      const genre = item.genre || 'General';
+      const isOnSale = item.on_sale && item.sale_price;
+      const displayPriceValue = isOnSale ? Number(item.sale_price) : (item.sell_price ? Number(item.sell_price) : item.price ? Number(item.price) : 0);
+      const price = displayPriceValue ? `₱${displayPriceValue.toFixed(2)}` : 'Free';
+      const originalPriceValue = item.sell_price ? Number(item.sell_price) : (item.price ? Number(item.price) : 0);
+      const originalHtml = (isOnSale && originalPriceValue) ? ` <small style="text-decoration:line-through;color:#777;">₱${originalPriceValue.toFixed(2)}</small>` : '';
+      const description = item.description_text || 'No description available yet.';
+
+      document.getElementById('previewImage').src = image;
+      document.getElementById('previewImage').alt = title;
+      document.getElementById('previewTitle').textContent = title;
+      document.getElementById('previewGenre').textContent = genre;
+      document.getElementById('previewAuthor').textContent = `By ${author}`;
+      const stockLimit = item.Stock?.quantity != null ? Number(item.Stock.quantity) : null;
+      document.getElementById('previewPrice').innerHTML = price + originalHtml;
+      document.getElementById('previewDescription').textContent = description;
+      document.getElementById('previewStockInfo').textContent = stockLimit != null ? `Available: ${stockLimit}` : 'Available: 1+';
+      const quantityInput = document.getElementById('previewQuantity');
+      const quantityError = document.getElementById('previewQuantityError');
+      quantityInput.value = 1;
+      quantityInput.max = stockLimit || 20;
+      quantityError.style.display = 'none';
+
+      quantityInput.addEventListener('input', () => {
+        let value = Math.max(1, Number(quantityInput.value) || 1);
+        if (stockLimit != null && value > stockLimit) {
+          value = stockLimit;
+          quantityError.textContent = `Only ${stockLimit} available for this item.`;
+          quantityError.style.display = 'block';
+        } else {
+          quantityError.style.display = 'none';
+        }
+        quantityInput.value = value;
+      });
+
+      document.getElementById('previewAddBtn').onclick = () => {
+        const qty = Math.max(1, Number(quantityInput.value) || 1);
+        if (stockLimit != null && qty > stockLimit) {
+          quantityError.textContent = `Only ${stockLimit} available for this item.`;
+          quantityError.style.display = 'block';
+          return;
+        }
+        addToCart({ ...item, quantity: qty, stock_quantity: stockLimit });
+        closeBookPreview();
+      };
+      const modal = document.getElementById('bookPreviewModal');
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeBookPreview() {
+      const modal = document.getElementById('bookPreviewModal');
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        closeBookPreview();
+      }
+    });
+
+    function renderGenreCollections(items) {
+      const groups = items.reduce((acc, item) => {
+        const genre = (item.genre || 'General').trim() || 'General';
+        if (!acc[genre]) acc[genre] = [];
+        acc[genre].push(item);
+        return acc;
+      }, {});
+
+      const sections = Object.keys(groups).sort().map(genre => `
+        <div class="genre-group">
+          <h3 class="genre-group-title">${genre}</h3>
+          <div class="book-grid">
+            ${groups[genre].map(renderBookCard).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      booksContainer.innerHTML = sections || '<p class="section-description">No books available yet.</p>';
+    }
+
+    async function loadBooks() {
+      try {
+        const response = await fetch('/api/v1/items');
+        const data = await response.json();
+        const rows = Array.isArray(data) ? data : data.rows || data.items || data.data || [];
+        const items = rows.length ? rows : sampleBooks;
+        loadedItems = items;
+        renderGenreCollections(items);
+        renderBestSellers(items);
+        renderNewArrivals(items);
+        renderSaleBooks(items);
+        initReviewForm(items);
+      } catch (error) {
+        loadedItems = sampleBooks;
+        renderGenreCollections(sampleBooks);
+        renderBestSellers(sampleBooks);
+        renderNewArrivals(sampleBooks);
+        renderSaleBooks(sampleBooks);
+        initReviewForm(sampleBooks);
+      }
+    }
+
+    function showSection(sectionId) {
+      const sections = document.querySelectorAll('main section');
+      sections.forEach(section => {
+        section.classList.toggle('hidden-section', section.id !== sectionId);
+      });
+      const navLinks = document.querySelectorAll('.category-nav .nav-link');
+      navLinks.forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
+    }
+
+    document.querySelectorAll('.category-nav .nav-link').forEach(link => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const sectionId = link.dataset.section;
+        if (sectionId) {
+          showSection(sectionId);
+        }
+      });
+    });
+
+    function performSearch() {
+      const q = (searchInput && searchInput.value || '').trim().toLowerCase();
+      if (!q) {
+        renderGenreCollections(loadedItems.length ? loadedItems : sampleBooks);
+        renderBestSellers(loadedItems.length ? loadedItems : sampleBooks);
+        renderNewArrivals(loadedItems.length ? loadedItems : sampleBooks);
+        renderSaleBooks(loadedItems.length ? loadedItems : sampleBooks);
+        return;
+      }
+      const filtered = (loadedItems.length ? loadedItems : sampleBooks).filter(item => {
+        const title = (item.description || item.title || '').toString().toLowerCase();
+        const author = (item.author || item.subtitle || '').toString().toLowerCase();
+        const genre = (item.genre || '').toString().toLowerCase();
+        return title.includes(q) || author.includes(q) || genre.includes(q);
+      });
+      renderGenreCollections(filtered);
+      renderBestSellers(filtered);
+      renderNewArrivals(filtered);
+      renderSaleBooks(filtered);
+    }
+
+    function renderUserActions() {
+      const userActions = document.getElementById('userActions');
+      const raw = localStorage.getItem('bookverseUser');
+      const user = raw ? JSON.parse(raw) : null;
+      if (!user) {
+        return;
+      }
+
+      const adminLink = user.role === 'admin' ? `<a href="/admin">Admin</a>` : '';
+
+      userActions.innerHTML = `
+        <span class="user-greeting">Hello, ${user.name || 'Customer'}</span>
+        <a href="/profile">My Account</a>
+        ${adminLink}
+        <a href="/cart" class="cart">Cart <span id="cartCount">0</span></a>
+        <a href="#" id="logoutButton">Logout</a>
+      `;
+
+      document.getElementById('logoutButton').addEventListener('click', (event) => {
+        event.preventDefault();
+        localStorage.removeItem('bookverseToken');
+        localStorage.removeItem('bookverseUser');
+        window.location.href = '/login';
+      });
+    }
+
+    loadBooksButton.addEventListener('click', loadBooks);
+    renderUserActions();
+    updateCartCount();
+    loadBooks();
+
+    if (searchButton) searchButton.addEventListener('click', performSearch);
+    if (searchInput) searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') performSearch(); });
+
+    // Side cart behaviour
+    const sideCart = document.getElementById('sideCart');
+    const sideCartItems = document.getElementById('sideCartItems');
+    const closeSideCart = document.getElementById('closeSideCart');
+    const cartToast = document.getElementById('cartToast');
+
+    function openSideCart() {
+      renderSideCartItems();
+      sideCart.classList.add('open');
+      sideCart.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeSideCartFn() {
+      sideCart.classList.remove('open');
+      sideCart.setAttribute('aria-hidden', 'true');
+    }
+
+    closeSideCart.addEventListener('click', (e) => { e.preventDefault(); closeSideCartFn(); });
+
+    function renderBestSellers(items) {
+      const sorted = [...items].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+      renderBooks(sorted.slice(0, 4), bestSellersContainer);
+    }
+
+    function renderNewArrivals(items) {
+      const newest = items.filter(item => item.isNew);
+      renderBooks(newest.length ? newest : items.slice(0, 3), newArrivalsContainer);
+    }
+
+    function renderSaleBooks(items) {
+      // Only show items that explicitly have a `sale` value set by admin/data.
+      // Consider items flagged with `on_sale` or having a `sale_price` set by admin.
+      const saleItems = (items || []).filter(item => {
+        if (!item) return false;
+        if (item.on_sale) return true;
+        if (item.sale_price) return Number(item.sale_price) > 0;
+        if (item.sale != null) return Number(item.sale) > 0;
+        return false;
+      });
+
+      if (saleItems.length) {
+        renderBooks(saleItems, saleBooksContainer);
+      } else {
+        saleBooksContainer.innerHTML = '<p class="section-description">No sale items currently.</p>';
+      }
+    }
+
+    function populateReviewBookOptions(items) {
+      const deliveredBooks = items.filter(item => item.isDelivered);
+      if (!reviewBookSelect) return;
+      reviewBookSelect.innerHTML = deliveredBooks.length
+        ? `<option value="">Select delivered book</option>${deliveredBooks.map(book => `<option value="${book.id}">${book.title}</option>`).join('')}`
+        : '<option value="">No delivered books available</option>';
+    }
+
+    function renderReviewList() {
+      if (!reviewList) return;
+      reviewList.innerHTML = sampleReviews.map(review => {
+        return `
+          <article class="review-card">
+            <div class="review-card-header">
+              <h4>${review.bookTitle}</h4>
+              <span class="review-stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</span>
+            </div>
+            <p>${review.comment}</p>
+            <div class="review-author">Reviewed by ${review.reviewer}</div>
+          </article>
+        `;
+      }).join('') || '<p class="section-description">No reviews yet. Be the first to review a delivered book.</p>';
+    }
+
+    function initReviewForm(items) {
+      populateReviewBookOptions(items);
+      renderReviewList();
+      if (reviewForm) {
+        reviewForm.addEventListener('submit', handleReviewSubmit);
+      }
+    }
+
+    function handleReviewSubmit(event) {
+      event.preventDefault();
+      if (!reviewBookSelect || !reviewMessageBox) return;
+      const bookId = Number(reviewBookSelect.value);
+      const ratingInput = document.querySelector('input[name="rating"]:checked');
+      const rating = ratingInput ? Number(ratingInput.value) : 5;
+      const comment = document.getElementById('reviewComment').value.trim();
+      if (!bookId || !comment) {
+        reviewMessageBox.textContent = 'Please select a delivered book and enter your comment.';
+        reviewMessageBox.className = 'message error';
+        reviewMessageBox.style.display = 'block';
+        return;
+      }
+      const book = (loadedItems.length ? loadedItems : sampleBooks).find(item => item.id === bookId);
+      const newReview = {
+        id: sampleReviews.length + 1,
+        bookId,
+        bookTitle: book ? book.title : 'Unknown book',
+        rating,
+        comment,
+        reviewer: 'Customer'
+      };
+      sampleReviews.unshift(newReview);
+      renderReviewList();
+      reviewForm.reset();
+      reviewMessageBox.textContent = 'Thank you! Your review was submitted.';
+      reviewMessageBox.className = 'message success';
+      reviewMessageBox.style.display = 'block';
+      setTimeout(() => { reviewMessageBox.style.display = 'none'; }, 3000);
+    }
+
+    function renderSideCartItems() {
+      const cart = getCart();
+      if (!cart || cart.length === 0) {
+        sideCartItems.innerHTML = '<div class="cart-empty">Your cart is empty.</div>';
+        document.getElementById('sideCartTotal').textContent = '₱0.00';
+        return;
+      }
+      const rows = cart.map(it => {
+        const price = it.sell_price ? Number(it.sell_price) : 0;
+        return `
+          <div class="side-cart-row">
+            <img src="${it.img_path || ''}" alt="${it.description || ''}" />
+            <div class="side-cart-row-body">
+              <div class="side-cart-row-title">${it.description}</div>
+              <div class="side-cart-row-meta">Qty: ${it.quantity} • ₱${(price * it.quantity).toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      sideCartItems.innerHTML = rows;
+      const total = cart.reduce((s, it) => s + ((it.sell_price ? Number(it.sell_price) : 0) * (it.quantity || 1)), 0);
+      document.getElementById('sideCartTotal').textContent = `₱${total.toFixed(2)}`;
+    }
+
+    function showCartToast(message, timeout = 2600) {
+      cartToast.textContent = message;
+      cartToast.classList.remove('hidden');
+      cartToast.classList.add('show');
+      setTimeout(() => {
+        cartToast.classList.remove('show');
+        cartToast.classList.add('hidden');
+      }, timeout);
+    }
+
+    function showMessage(message, type = 'info', timeout = 3000) {
+      const prefix = type === 'error' ? '⚠️ ' : type === 'success' ? '✅ ' : '';
+      showCartToast(prefix + message, timeout);
+    }
+
+    // Close side cart when clicking outside on small screens
+    document.addEventListener('click', (e) => {
+      if (!sideCart.classList.contains('open')) return;
+      if (!sideCart.contains(e.target) && !e.target.closest('.cart')) {
+        closeSideCartFn();
+      }
+    });
+  </script>
+</body>
+</html>
