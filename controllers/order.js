@@ -32,6 +32,79 @@ const ensurePaymentMethodColumn = () => {
     });
 };
 
+const formatPrice = (value) => {
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? number.toFixed(2) : '0.00';
+};
+
+const buildOrderEmailHtml = ({ subtitle, introText, order, items, details, footerText }) => {
+    const itemsHtml = items.map(item => {
+        const price = Number(item.sell_price || item.price || 0);
+        const qty = Number(item.quantity || item.qty || 0) || 0;
+        const lineTotal = Number(price * qty).toFixed(2);
+        return `
+            <tr>
+                <td style="padding:14px 12px; border-bottom:1px solid #e5e7eb; color:#111827;">${item.description || item.title || 'Item'}</td>
+                <td style="padding:14px 12px; border-bottom:1px solid #e5e7eb; color:#111827; text-align:center;">${qty}</td>
+                <td style="padding:14px 12px; border-bottom:1px solid #e5e7eb; color:#111827; text-align:right;">₱${formatPrice(price)}</td>
+                <td style="padding:14px 12px; border-bottom:1px solid #e5e7eb; color:#111827; text-align:right;">₱${lineTotal}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const detailsHtml = details.map(detail => `
+            <p style="margin:0 0 8px; font-size:15px; color:#111827;"><strong>${detail.label}:</strong> ${detail.value || 'N/A'}</p>
+        `).join('');
+
+    const subtotal = items.reduce((sum, item) => {
+        const price = Number(item.sell_price || item.price || 0);
+        const qty = Number(item.quantity || item.qty || 0) || 0;
+        return sum + price * qty;
+    }, 0);
+
+    return `
+        <div style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color:#1f2937; background:#f3f4f6; padding:24px;">
+            <div style="max-width:700px; margin:0 auto; background:#ffffff; border-radius:24px; overflow:hidden; box-shadow:0 18px 50px rgba(15,23,42,0.08);">
+                <div style="background:#640D14; color:#ffffff; padding:28px 32px; text-align:center;">
+                    <h1 style="margin:0; font-size:30px; letter-spacing:0.02em;">Bookverse</h1>
+                    <p style="margin:8px 0 0; font-size:15px; opacity:0.88; text-transform:uppercase; letter-spacing:0.08em;">${subtitle}</p>
+                </div>
+                <div style="padding:32px 32px 24px;">
+                    <p style="margin:0 0 18px; font-size:16px; line-height:1.8; color:#374151;">${introText}</p>
+                    <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:18px; padding:20px; margin-bottom:24px;">
+                        <p style="margin:0 0 12px; font-size:13px; color:#6b7280; letter-spacing:0.12em; text-transform:uppercase;">Order details</p>
+                        ${detailsHtml}
+                    </div>
+                    <table width="100%" style="border-collapse:collapse; margin-bottom:24px;">
+                        <thead>
+                            <tr style="background:#fbe7ed;">
+                                <th style="padding:14px 12px; font-size:14px; color:#6b7280; text-align:left;">Item</th>
+                                <th style="padding:14px 12px; font-size:14px; color:#6b7280; text-align:center;">Qty</th>
+                                <th style="padding:14px 12px; font-size:14px; color:#6b7280; text-align:right;">Price</th>
+                                <th style="padding:14px 12px; font-size:14px; color:#6b7280; text-align:right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:18px 20px; background:#f8fafc; border-radius:18px; border:1px solid #e5e7eb;">
+                        <span style="font-size:15px; color:#4b5563;">Subtotal</span>
+                        <span style="font-size:18px; font-weight:700; color:#111827;">₱${formatPrice(subtotal)}</span>
+                    </div>
+                    <div style="margin-top:24px; padding:22px; background:#f8fafc; border-radius:18px; border:1px solid #e5e7eb;">
+                        <p style="margin:0 0 8px; font-size:15px; font-weight:700; color:#111827;">What happens next?</p>
+                        <p style="margin:0; font-size:15px; line-height:1.75; color:#4b5563;">${footerText}</p>
+                    </div>
+                </div>
+                <div style="background:#111827; color:#f8fafc; padding:18px 32px; text-align:center; font-size:13px;">
+                    <p style="margin:0;">Bookverse • A better way to buy books online.</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
 const fetchOrderDetails = (orderId) => {
     return new Promise((resolve, reject) => {
         const sql = `
@@ -97,68 +170,20 @@ const sendStatusUpdateReceipt = async (orderId, status) => {
         return sum + price * qty;
     }, 0);
 
-    const itemsHtml = items.map(item => {
-        const price = Number(item.sell_price || 0).toFixed(2);
-        const qty = Number(item.quantity || 0);
-        const lineTotal = (price * qty).toFixed(2);
-        return `
-            <tr>
-                <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${item.description || 'Item'}</td>
-                <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">${qty}</td>
-                <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₱${price}</td>
-                <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₱${lineTotal}</td>
-            </tr>
-        `;
-    }).join('');
-
-    const html = `
-        <div style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color:#1f2937; background:#f8fafc; padding:24px;">
-            <div style="max-width:700px; margin:0 auto; background:#ffffff; border-radius:24px; overflow:hidden; box-shadow:0 18px 50px rgba(15,23,42,0.08);">
-                <div style="background:#640D14; color:#ffffff; padding:28px 32px; text-align:center;">
-                    <h1 style="margin:0;font-size:28px;">Bookverse</h1>
-                    <p style="margin:8px 0 0; font-size:15px; opacity:0.85;">Order status update</p>
-                </div>
-                <div style="padding:32px 32px 24px;">
-                    <p style="margin:0 0 18px; font-size:16px; line-height:1.7;">Hello ${order.fname || ''} ${order.lname || ''},</p>
-                    <p style="margin:0 0 24px; font-size:16px; line-height:1.7;">
-                        Your order <strong>#${orderId}</strong> status has been updated to <strong style="color:#640D14; text-transform:capitalize;">${status}</strong>.
-                    </p>
-                    <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:16px; padding:18px; margin-bottom:24px;">
-                        <p style="margin:0 0 8px; font-size:14px; color:#6b7280; letter-spacing:0.02em; text-transform:uppercase;">Order details</p>
-                        <p style="margin:0; font-size:15px;"><strong>Order number:</strong> #${orderId}</p>
-                        <p style="margin:6px 0 0; font-size:15px;"><strong>Payment method:</strong> ${order.payment_method || 'N/A'}</p>
-                        <p style="margin:6px 0 0; font-size:15px;"><strong>Shipping address:</strong> ${order.shipping_address || 'N/A'}</p>
-                        <p style="margin:6px 0 0; font-size:15px;"><strong>Zip code:</strong> ${order.shipping_zipcode || 'N/A'}</p>
-                        <p style="margin:6px 0 0; font-size:15px;"><strong>Delivery status:</strong> ${status}</p>
-                    </div>
-                    <table width="100%" style="border-collapse:collapse; margin-bottom:24px;">
-                        <thead>
-                            <tr style="background:#f3e8ef; text-align:left;">
-                                <th style="padding:12px; font-size:14px; color:#6b7280;">Item</th>
-                                <th style="padding:12px; font-size:14px; color:#6b7280; text-align:center;">Qty</th>
-                                <th style="padding:12px; font-size:14px; color:#6b7280; text-align:right;">Price</th>
-                                <th style="padding:12px; font-size:14px; color:#6b7280; text-align:right;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                        </tbody>
-                    </table>
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
-                        <div style="color:#4b5563; font-size:15px;">Subtotal</div>
-                        <div style="font-weight:700; font-size:18px; color:#111827;">₱${subtotal.toFixed(2)}</div>
-                    </div>
-                    <div style="margin-top:24px; padding:20px; background:#f8fafc; border-radius:18px; border:1px solid #e5e7eb;">
-                        <p style="margin:0 0 8px; font-size:15px; font-weight:700; color:#111827;">What happens next?</p>
-                        <p style="margin:0; font-size:15px; line-height:1.7; color:#4b5563;">You can check the status of your order in your Bookverse account. If you need help, reply to this email or visit our support page.</p>
-                    </div>
-                </div>
-                <div style="background:#111827; color:#f8fafc; padding:18px 32px; text-align:center; font-size:13px;">
-                    <p style="margin:0;">Bookverse • A better way to buy books online.</p>
-                </div>
-            </div>
-        </div>
-    `;
+    const html = buildOrderEmailHtml({
+        subtitle: 'Order status update',
+        introText: `Hello ${order.fname || ''} ${order.lname || ''},<br><br>Your order <strong>#${orderId}</strong> status has been updated to <strong style="color:#640D14; text-transform:capitalize;">${status}</strong>.`,
+        order,
+        items,
+        details: [
+            { label: 'Order number', value: `#${orderId}` },
+            { label: 'Payment method', value: order.payment_method || 'N/A' },
+            { label: 'Shipping address', value: order.shipping_address || 'N/A' },
+            { label: 'Zip code', value: order.shipping_zipcode || 'N/A' },
+            { label: 'Delivery status', value: status }
+        ],
+        footerText: 'You can check the status of your order in your Bookverse account. If you need help, reply to this email or visit our support page.'
+    });
 
     await sendEmail({
         email: order.customer_email,
@@ -329,10 +354,37 @@ exports.createOrder = async (req, res, next) => {
                                 }
 
                                 try {
+                                    const emailOrder = {
+                                        order_id,
+                                        shipping_address: deliveryDetails.addressline,
+                                        shipping_zipcode: deliveryDetails.zipcode,
+                                        payment_method: normalizedPaymentMethod,
+                                        fname: user.fname || '',
+                                        lname: user.lname || ''
+                                    };
+                                    const emailItems = cart.map(item => ({
+                                        description: item.title || item.name || 'Item',
+                                        quantity: Number(item.quantity || 1),
+                                        sell_price: Number(item.sell_price || item.price || 0)
+                                    }));
+                                    const html = buildOrderEmailHtml({
+                                        subtitle: 'Order confirmation',
+                                        introText: `Thank you — your order <strong>#${order_id}</strong> has been received and is being processed.`,
+                                        order: emailOrder,
+                                        items: emailItems,
+                                        details: [
+                                            { label: 'Order number', value: `#${order_id}` },
+                                            { label: 'Payment method', value: normalizedPaymentMethod },
+                                            { label: 'Shipping address', value: deliveryDetails.addressline },
+                                            { label: 'Zip code', value: deliveryDetails.zipcode }
+                                        ],
+                                        footerText: 'You can check the status of your order in your Bookverse account. If you need help, reply to this email or visit our support page.'
+                                    });
+
                                     await sendEmail({
                                         email,
-                                        subject: 'Order Successful',
-                                        message: `Your order #${order_id} has been received and is being processed.`
+                                        subject: 'Bookverse Order Confirmation',
+                                        html
                                     });
                                 } catch (emailErr) {
                                     console.log('Email error:', emailErr);
