@@ -47,6 +47,7 @@ const fetchOrderDetails = (orderId) => {
                    c.customer_id,
                    c.fname,
                    c.lname,
+                   u.id AS user_id,
                    u.email AS customer_email
             FROM orderinfo oi
             INNER JOIN customer c ON oi.customer_id = c.customer_id
@@ -180,6 +181,15 @@ const executeQuery = (sql, params = []) => {
             return resolve(results);
         });
     });
+};
+
+const decrementStockForOrder = async (orderId) => {
+    const items = await fetchOrderItems(orderId);
+    for (const item of items) {
+        const quantity = Number(item.quantity || 0);
+        if (!Number.isInteger(quantity) || quantity <= 0) continue;
+        await executeQuery('UPDATE stock SET quantity = GREATEST(quantity - ?, 0) WHERE item_id = ?', [quantity, item.item_id]);
+    }
 };
 
 const getUserRole = async (userId) => {
@@ -455,6 +465,39 @@ exports.updateShippingDetails = async (req, res) => {
     }
 };
 
+exports.getOrderReceipt = async (req, res) => {
+    try {
+        const userId = req.body.user?.id || req.user?.id;
+        const orderId = parseInt(req.params.orderId, 10);
+
+        if (!userId) {
+            return res.status(401).json({ error: 'User authentication missing' });
+        }
+        if (!orderId) {
+            return res.status(400).json({ error: 'Order ID is required' });
+        }
+
+        const order = await fetchOrderDetails(orderId);
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        const admin = await isAdminUser(userId);
+        if (!admin && order.user_id !== userId) {
+            return res.status(403).json({ error: 'Not allowed to access this receipt' });
+        }
+
+        const items = await fetchOrderItems(orderId);
+        const pdfBuffer = await generateReceiptPdf(order, items);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="receipt_order_${orderId}.pdf"`);
+        return res.send(pdfBuffer);
+    } catch (error) {
+        return res.status(500).json({ error: 'Error generating receipt', details: error.message });
+    }
+};
+
 exports.updateOrderStatus = async (req, res) => {
     try {
         const userId = req.body.user?.id;
@@ -476,6 +519,11 @@ exports.updateOrderStatus = async (req, res) => {
             return res.status(403).json({ error: 'Only admin users can update order status' });
         }
 
+        const previousOrder = await fetchOrderDetails(orderId);
+        if (!previousOrder) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
         const updates = ['status = ?'];
         const params = [status];
         if (['shipping', 'on delivery', 'delivered'].includes(status)) {
@@ -490,6 +538,14 @@ exports.updateOrderStatus = async (req, res) => {
             }
             if (!result || result.affectedRows === 0) {
                 return res.status(404).json({ error: 'Order not found' });
+            }
+
+            if (status === 'delivered' && previousOrder.status !== 'delivered') {
+                try {
+                    await decrementStockForOrder(orderId);
+                } catch (stockErr) {
+                    console.log('Stock decrement error:', stockErr);
+                }
             }
 
             try {

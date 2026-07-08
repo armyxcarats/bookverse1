@@ -2,12 +2,13 @@ const express = require('express');
 
 const router = express.Router();
 
-const { createOrder, listOrders, deleteOrder, updateOrderStatus, updateShippingDetails, getOrderItems, cancelOrder } = require('../controllers/order');
+const { createOrder, listOrders, deleteOrder, updateOrderStatus, updateShippingDetails, getOrderItems, cancelOrder, getOrderReceipt } = require('../controllers/order');
 const { isAuthenticatedUser, isAdminUser } = require('../middlewares/auth');
 
 router.post('/create-order', isAuthenticatedUser, createOrder);
 router.get('/orders', isAuthenticatedUser, listOrders);
 router.get('/orders/:orderId/items', isAuthenticatedUser, getOrderItems);
+router.get('/orders/:orderId/receipt', isAuthenticatedUser, isAdminUser, getOrderReceipt);
 router.put('/orders/:orderId/shipping', isAuthenticatedUser, updateShippingDetails);
 router.put('/orders/:orderId/status', isAuthenticatedUser, isAdminUser, updateOrderStatus);
 router.put('/orders/:orderId/cancel', isAuthenticatedUser, cancelOrder);

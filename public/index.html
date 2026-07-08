@@ -426,7 +426,7 @@
       const description = item.description_text || 'No description available yet.';
       const snippet = description.length > 95 ? description.slice(0, 95) + '...' : description;
       const image = item.img_path || item.image || 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80';
-      const pages = item.pages || item.Stock?.quantity || 'N/A';
+      const availableStock = item.Stock?.quantity ?? item.quantity ?? item.pages ?? 'N/A';
       // Prefer explicit sale properties from the API: `on_sale` and `sale_price`.
       const isOnSale = item.on_sale && item.sale_price;
       const displayPriceValue = isOnSale ? Number(item.sale_price) : (item.sell_price ? Number(item.sell_price) : item.price ? Number(item.price) : 0);
@@ -453,7 +453,7 @@
               <p class="book-card-author">${author}</p>
               ${genreLabel}
               <p class="book-card-description">${snippet}</p>
-              <div class="book-card-meta"><span>${pages} pages</span><span class="book-card-review" data-item-id="${id}" style="opacity:0.5;">${reviewSummary}</span></div>
+              <div class="book-card-meta"><span>${availableStock} stocks</span></div>
               <div style="margin-top:8px; font-weight:700;">${displayPrice}${originalPriceHtml}</div>
               <div class="book-preview-buttons" style="margin-top: 16px; display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="button button-primary" type="button" onclick="event.stopPropagation(); addToCart(JSON.parse(decodeURIComponent('${itemData}')))">Add to cart</button>
@@ -938,6 +938,12 @@
       if (!sideCart.contains(e.target) && !e.target.closest('.cart')) {
         closeSideCartFn();
       }
+    });
+
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    checkoutBtn?.addEventListener('click', (event) => {
+      event.preventDefault();
+      window.location.href = '/cart';
     });
   </script>
 </body>

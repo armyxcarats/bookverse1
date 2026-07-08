@@ -1,7 +1,25 @@
+const fs = require('fs');
+const path = require('path');
 const PDFDocument = require('pdfkit');
 
-const formatCurrency = (amount) => {
-  return `₱${Number(amount).toFixed(2)}`;
+const resolvePdfFont = () => {
+  const candidates = [
+    process.env.PDF_FONT_PATH,
+    'C:/Windows/Fonts/Arial.ttf',
+    'C:/Windows/Fonts/Calibri.ttf',
+    'C:/Windows/Fonts/seguisym.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+    '/Library/Fonts/Arial Unicode.ttf',
+    '/Library/Fonts/Segoe UI.ttf'
+  ];
+
+  return candidates.find(filePath => filePath && fs.existsSync(filePath));
+};
+
+const formatCurrency = (amount, useSymbol = true) => {
+  const value = Number(amount).toFixed(2);
+  return useSymbol ? `₱${value}` : `PHP ${value}`;
 };
 
 const formatPaymentMethod = (method) => {
@@ -17,6 +35,11 @@ const generateReceiptPdf = (order, items) => {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
     const chunks = [];
+    const pdfFontPath = resolvePdfFont();
+
+    if (pdfFontPath) {
+      doc.font(pdfFontPath);
+    }
 
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));

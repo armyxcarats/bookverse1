@@ -2,7 +2,11 @@ const connection = require('../config/database');
 const { QueryTypes } = require('sequelize');
 
 exports.addressChart = async (req, res) => {
-    const sql = 'SELECT count(addressline) as total, addressline FROM customer GROUP BY addressline ORDER BY total DESC';
+    const sql = `SELECT count(addressline) as total, addressline
+        FROM customer
+        WHERE addressline IS NOT NULL AND TRIM(addressline) <> ''
+        GROUP BY addressline
+        ORDER BY total DESC`;
     try {
         const rows = await connection.query(sql, { type: QueryTypes.SELECT });
         return res.status(200).json({ rows });

@@ -720,7 +720,7 @@
           </div>
           <div class="dashboard-card">
             <h4>Top Delivery Areas</h4>
-            <table class="dashboard-table"><thead><tr><th>Address</th><th>Orders</th></tr></thead><tbody>${addressRows.map(r => `<tr><td>${r.addressline || 'Unknown'}</td><td>${r.total || 0}</td></tr>`).join('')}</tbody></table>
+            <table class="dashboard-table"><thead><tr><th>Address</th><th>Orders</th></tr></thead><tbody>${addressRows.filter(r => r.addressline && String(r.addressline).trim() !== '').map(r => `<tr><td>${r.addressline}</td><td>${r.total || 0}</td></tr>`).join('')}</tbody></table>
           </div>
           <div class="dashboard-card">
             <h4>Top Sold Items</h4>
@@ -832,8 +832,44 @@
             { title: 'Address', data: 'shipping_address' },
             { title: 'Zip Code', data: 'shipping_zipcode' },
             { title: 'Items', data: 'items' },
-            { title: 'Total', data: 'total_amount', render: v => v ? '₱' + Number(v).toFixed(2) : '₱0.00' }
+            { title: 'Total', data: 'total_amount', render: v => v ? '₱' + Number(v).toFixed(2) : '₱0.00' },
+            { title: 'Actions', data: null, orderable: false, render: (data, type, row) => `
+                <button class="download-receipt" data-order-id="${row.order_id}">Receipt</button>
+                <button class="view-items" data-order-id="${row.order_id}">Items</button>
+              ` }
           ]
+        });
+
+        $('#ordersTable tbody').on('click', 'button.download-receipt', async function() {
+          const orderId = $(this).data('order-id');
+          try {
+            const response = await fetch(`/api/v1/orders/${orderId}/receipt`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+              const body = await response.json().catch(() => ({}));
+              message.text(body.error || 'Unable to download receipt').show();
+              return;
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `receipt_order_${orderId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+          } catch (xhr) {
+            const body = xhr.responseJSON || {};
+            message.text(body.error || 'Unable to download receipt').show();
+          }
+        });
+
+        $('#ordersTable tbody').on('click', 'button.view-items', async function() {
+          const row = window.orderTable.row($(this).parents('tr')).data();
+          const items = row.items || 'No items available';
+          alert(`Order #${row.order_id} items:\n${items}`);
         });
 
         $('#ordersTable tbody').on('change', 'select.status-select', async function() {
