@@ -85,9 +85,18 @@
     <section class="trending-section" id="collections">
       <div class="trending-header">
         <h2>Explore Bookverse</h2>
-        <button id="load-books" class="button button-secondary">Refresh</button>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <button id="load-books" class="button button-secondary">Refresh</button>
+          <div id="viewModeControls" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-weight:600; color:#3b3b3b;">View mode:</span>
+            <button id="paginationModeBtn" type="button" class="button button-secondary">Pagination</button>
+            <button id="infiniteModeBtn" type="button" class="button button-secondary">Infinite Scroll</button>
+          </div>
+        </div>
       </div>
+      <div id="booksViewInfo" style="margin:12px 0 0; font-size:0.95rem; color:#555;"></div>
       <div id="books" class="book-grid"></div>
+      <div id="booksPaginationControls" style="margin-top:20px; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;"></div>
     </section>
 
     <section class="trending-section hidden-section" id="bestsellers">
@@ -191,6 +200,13 @@
     const searchInput = document.querySelector('.search-bar input');
     const searchButton = document.querySelector('.search-button');
     let loadedItems = [];
+    let filteredItems = [];
+
+    const getBooksForMainView = () => {
+      if (filteredItems.length) return filteredItems;
+      if (loadedItems.length) return loadedItems;
+      return sampleBooks;
+    };
 
     async function loadItemsFromApi() {
       try {
@@ -205,7 +221,8 @@
             }
             return i;
           });
-          renderBooks(loadedItems);
+          filteredItems = [];
+          renderBooksView();
         }
       } catch (e) {
         console.error('Failed to load items from API', e);
@@ -593,14 +610,16 @@
         const rows = Array.isArray(data) ? data : data.rows || data.items || data.data || [];
         const items = rows.length ? rows : sampleBooks;
         loadedItems = items;
-        renderGenreCollections(items);
+        filteredItems = [];
+        renderBooksView();
         renderBestSellers(items);
         renderNewArrivals(items);
         renderSaleBooks(items);
         maybeOpenRedirectPreview();
       } catch (error) {
         loadedItems = sampleBooks;
-        renderGenreCollections(sampleBooks);
+        filteredItems = [];
+        renderBooksView();
         renderBestSellers(sampleBooks);
         renderNewArrivals(sampleBooks);
         renderSaleBooks(sampleBooks);
@@ -651,23 +670,27 @@
 
     function performSearch() {
       const q = (searchInput && searchInput.value || '').trim().toLowerCase();
+      const items = loadedItems.length ? loadedItems : sampleBooks;
       if (!q) {
-        renderGenreCollections(loadedItems.length ? loadedItems : sampleBooks);
-        renderBestSellers(loadedItems.length ? loadedItems : sampleBooks);
-        renderNewArrivals(loadedItems.length ? loadedItems : sampleBooks);
-        renderSaleBooks(loadedItems.length ? loadedItems : sampleBooks);
+        filteredItems = [];
+        renderBooksView();
+        renderBestSellers(items);
+        renderNewArrivals(items);
+        renderSaleBooks(items);
         return;
       }
-      const filtered = (loadedItems.length ? loadedItems : sampleBooks).filter(item => {
+      filteredItems = items.filter(item => {
         const title = (item.description || item.title || '').toString().toLowerCase();
         const author = (item.author || item.subtitle || '').toString().toLowerCase();
         const genre = (item.genre || '').toString().toLowerCase();
         return title.includes(q) || author.includes(q) || genre.includes(q);
       });
-      renderGenreCollections(filtered);
-      renderBestSellers(filtered);
-      renderNewArrivals(filtered);
-      renderSaleBooks(filtered);
+      currentPage = 1;
+      infinitePage = 1;
+      renderBooksView();
+      renderBestSellers(filteredItems.length ? filteredItems : items);
+      renderNewArrivals(filteredItems.length ? filteredItems : items);
+      renderSaleBooks(filteredItems.length ? filteredItems : items);
     }
 
     function renderUserActions() {
@@ -697,10 +720,108 @@
       });
     }
 
+    const paginationModeBtn = document.getElementById('paginationModeBtn');
+    const infiniteModeBtn = document.getElementById('infiniteModeBtn');
+    const booksViewInfo = document.getElementById('booksViewInfo');
+    const booksPaginationControls = document.getElementById('booksPaginationControls');
+
+    let viewMode = localStorage.getItem('bookverseBooksViewMode') || 'pagination';
+    let currentPage = 1;
+    const itemsPerPage = 8;
+    let infinitePage = 1;
+    let infiniteLoading = false;
+
+    const setViewMode = (mode) => {
+      viewMode = mode;
+      localStorage.setItem('bookverseBooksViewMode', mode);
+      currentPage = 1;
+      infinitePage = 1;
+      booksContainer.innerHTML = '';
+      booksPaginationControls.innerHTML = '';
+      booksViewInfo.textContent = mode === 'pagination'
+        ? `Showing page ${currentPage} of ${Math.ceil((loadedItems.length || sampleBooks.length) / itemsPerPage)}`
+        : 'Infinite scroll mode: scroll down to load more books until there are no more books.';
+      paginationModeBtn.classList.toggle('button-primary', mode === 'pagination');
+      paginationModeBtn.classList.toggle('button-secondary', mode !== 'pagination');
+      infiniteModeBtn.classList.toggle('button-primary', mode === 'infinite');
+      infiniteModeBtn.classList.toggle('button-secondary', mode !== 'infinite');
+      renderBooksView();
+    };
+
+    const renderPaginationControls = () => {
+      if (viewMode !== 'pagination') {
+        booksPaginationControls.innerHTML = '';
+        return;
+      }
+      const itemCount = loadedItems.length || sampleBooks.length;
+      const totalPages = Math.max(1, Math.ceil(itemCount / itemsPerPage));
+      const prevDisabled = currentPage <= 1;
+      const nextDisabled = currentPage >= totalPages;
+      booksPaginationControls.innerHTML = `
+        <button type="button" class="button ${prevDisabled ? 'button-secondary' : 'button-primary'}" ${prevDisabled ? 'disabled' : ''} id="prevPageBtn">Previous</button>
+        <span style="align-self:center; color:#444;">Page ${currentPage} of ${totalPages}</span>
+        <button type="button" class="button ${nextDisabled ? 'button-secondary' : 'button-primary'}" ${nextDisabled ? 'disabled' : ''} id="nextPageBtn">Next</button>
+      `;
+      document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage -= 1;
+          renderBooksView();
+        }
+      });
+      document.getElementById('nextPageBtn').addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          currentPage += 1;
+          renderBooksView();
+        }
+      });
+    };
+
+    const renderBooksView = () => {
+      const items = loadedItems.length ? loadedItems : sampleBooks;
+      if (viewMode === 'pagination') {
+        const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        renderBooks(items.slice(start, end));
+        booksViewInfo.textContent = `Showing page ${currentPage} of ${totalPages}`;
+        renderPaginationControls();
+      } else {
+        renderBooks(items.slice(0, infinitePage * itemsPerPage));
+        const more = items.length > infinitePage * itemsPerPage;
+        booksViewInfo.textContent = more
+          ? `Infinite scroll: loaded ${Math.min(items.length, infinitePage * itemsPerPage)} of ${items.length} books.`
+          : `Infinite scroll: showing all ${items.length} books.`;
+        booksPaginationControls.innerHTML = more ? '<span style="color:#444;">Scroll down to load more</span>' : '<span style="color:#444;">No more books to load</span>';
+      }
+    };
+
+    const handleScrollForInfinite = () => {
+      if (viewMode !== 'infinite' || infiniteLoading) return;
+      const rect = booksContainer.getBoundingClientRect();
+      if (rect.bottom - window.innerHeight < 160) {
+        infiniteLoading = true;
+        setTimeout(() => {
+          const items = loadedItems.length ? loadedItems : sampleBooks;
+          const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+          if (infinitePage < totalPages) {
+            infinitePage += 1;
+            renderBooksView();
+          }
+          infiniteLoading = false;
+        }, 250);
+      }
+    };
+
+    paginationModeBtn.addEventListener('click', () => setViewMode('pagination'));
+    infiniteModeBtn.addEventListener('click', () => setViewMode('infinite'));
+    window.addEventListener('scroll', handleScrollForInfinite);
+
     loadBooksButton.addEventListener('click', loadBooks);
     checkUserOnLoad().then(() => {
       renderUserActions();
       updateCartCount();
+      setViewMode(viewMode);
       loadBooks();
     });
 
