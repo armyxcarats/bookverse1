@@ -100,12 +100,13 @@ exports.createItem = async (req, res, next) => {
         const { description, description_text, cost_price, sell_price, quantity, img_path, genre, on_sale, sale_price } = req.body;
         const files = req.files || [];
         const imagePath = files.length ? toWebPath(files[0].path) : toWebPath(img_path) || null;
+        const isOnSale = !!Number(on_sale);
 
         if (!description || !cost_price || !sell_price) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        if (on_sale && !sale_price) {
+        if (isOnSale && !sale_price) {
             return res.status(400).json({ error: 'Sale price is required when item is on sale' });
         }
 
@@ -115,8 +116,8 @@ exports.createItem = async (req, res, next) => {
             genre: genre || null,
             cost_price,
             sell_price,
-            on_sale: !!Number(on_sale),
-            sale_price: sale_price ? sale_price : null,
+            on_sale: isOnSale,
+            sale_price: isOnSale ? sale_price : null,
             img_path: imagePath
         });
 
@@ -151,12 +152,13 @@ exports.updateItem = async (req, res, next) => {
         const { description, description_text, cost_price, sell_price, quantity, img_path, genre, on_sale, sale_price } = req.body;
         const files = req.files || [];
         const imagePath = files.length ? toWebPath(files[0].path) : toWebPath(img_path) || null;
+        const isOnSale = !!Number(on_sale);
 
         if (!description || !cost_price || !sell_price) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        if (on_sale && !sale_price) {
+        if (isOnSale && !sale_price) {
             return res.status(400).json({ error: 'Sale price is required when item is on sale' });
         }
 
@@ -166,8 +168,8 @@ exports.updateItem = async (req, res, next) => {
             genre: genre || null,
             cost_price,
             sell_price,
-            on_sale: !!Number(on_sale),
-            sale_price: on_sale ? sale_price : null
+            on_sale: isOnSale,
+            sale_price: isOnSale ? sale_price : null
         };
         if (imagePath) {
             updateData.img_path = imagePath;
