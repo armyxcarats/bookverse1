@@ -4,6 +4,15 @@ const formatCurrency = (amount) => {
   return `₱${Number(amount).toFixed(2)}`;
 };
 
+const formatPaymentMethod = (method) => {
+  if (!method) return '';
+  const normalized = String(method).trim().toLowerCase();
+  if (normalized === 'gcash') return 'GCash';
+  if (normalized === 'paymaya') return 'PayMaya';
+  if (normalized === 'cash on delivery' || normalized === 'cashondelivery' || normalized === 'cod') return 'Cash on Delivery';
+  return method;
+};
+
 const generateReceiptPdf = (order, items) => {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
@@ -18,6 +27,7 @@ const generateReceiptPdf = (order, items) => {
 
     doc.fontSize(12).text(`Order #: ${order.order_id}`);
     doc.text(`Status: ${order.status}`);
+    if (order.payment_method) doc.text(`Payment Method: ${formatPaymentMethod(order.payment_method)}`);
     doc.text(`Date Placed: ${new Date(order.date_placed).toLocaleString()}`);
     if (order.date_shipped) doc.text(`Date Shipped: ${new Date(order.date_shipped).toLocaleString()}`);
     doc.moveDown(0.5);

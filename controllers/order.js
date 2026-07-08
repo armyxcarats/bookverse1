@@ -2,6 +2,35 @@ const connection = require('../config/_database');
 const sendEmail = require('../utils/sendEmail');
 const generateReceiptPdf = require('../utils/generateReceiptPdf');
 const VALID_ORDER_STATUSES = ['pending', 'shipping', 'on delivery', 'cancelled', 'delivered'];
+const VALID_PAYMENT_METHODS = ['gcash', 'paymaya', 'cash on delivery'];
+
+const normalizePaymentMethod = (value) => {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'gcash') return 'gcash';
+    if (normalized === 'paymaya') return 'paymaya';
+    if (normalized === 'cash on delivery' || normalized === 'cashondelivery' || normalized === 'cod') return 'cash on delivery';
+    return null;
+};
+
+const ensurePaymentMethodColumn = () => {
+    return new Promise((resolve, reject) => {
+        connection.query("SHOW COLUMNS FROM orderinfo LIKE 'payment_method'", (err, results) => {
+            if (err) return reject(err);
+            if (results && results.length) return resolve();
+
+            connection.query("ALTER TABLE orderinfo ADD COLUMN payment_method VARCHAR(32) DEFAULT NULL", (alterErr) => {
+                if (alterErr) {
+                    if (/duplicate column|already exists/i.test(alterErr.message)) {
+                        return resolve();
+                    }
+                    return reject(alterErr);
+                }
+                resolve();
+            });
+        });
+    });
+};
 
 const fetchOrderDetails = (orderId) => {
     return new Promise((resolve, reject) => {
@@ -13,6 +42,7 @@ const fetchOrderDetails = (orderId) => {
                    oi.shipping_address,
                    oi.shipping_zipcode,
                    oi.shipping_phone,
+                   oi.payment_method,
                    oi.status,
                    c.customer_id,
                    c.fname,
@@ -92,14 +122,20 @@ const getUserRole = async (userId) => {
     return Array.isArray(results) && results.length > 0 ? results[0].role : null;
 };
 
+const getCustomerDeliveryDetails = async (userId) => {
+    const sql = 'SELECT addressline, zipcode, phone FROM customer WHERE user_id = ? LIMIT 1';
+    const results = await executeQuery(sql, [parseInt(userId, 10)]);
+    return Array.isArray(results) && results.length > 0 ? results[0] : null;
+};
+
 const isAdminUser = async (userId) => {
     const role = await getUserRole(userId);
     return role === 'admin';
 };
 
-exports.createOrder = (req, res, next) => {
+exports.createOrder = async (req, res, next) => {
     try {
-        const { cart, shipping_cost, payment_amount } = req.body;
+        const { cart, shipping_cost, payment_amount, payment_method } = req.body;
         const user = req.body.user;
 
         if (!user || !user.id) {
@@ -132,13 +168,28 @@ exports.createOrder = (req, res, next) => {
         }
         computedTotal = Number((computedTotal + shippingAmount).toFixed(2));
 
-        const payVal = Number.parseFloat(payment_amount);
-        if (!Number.isFinite(payVal)) {
-            return res.status(400).json({ error: 'payment_amount is required and must be numeric' });
+        const normalizedPaymentMethod = normalizePaymentMethod(payment_method);
+        if (!normalizedPaymentMethod || !VALID_PAYMENT_METHODS.includes(normalizedPaymentMethod)) {
+            return res.status(400).json({ error: 'payment_method is required and must be one of: GCash, PayMaya, Cash on Delivery' });
         }
+        const deliveryDetails = await getCustomerDeliveryDetails(user.id);
+        if (!deliveryDetails || !deliveryDetails.addressline || !deliveryDetails.zipcode || !deliveryDetails.phone) {
+            return res.status(400).json({ error: 'Delivery address, zip code, and phone number are required on your profile before payment.' });
+        }
+        let payVal = Number.parseFloat(payment_amount);
+        if (!Number.isFinite(payVal)) {
+            if (normalizedPaymentMethod === 'cash on delivery') {
+                payVal = 0;
+            } else {
+                return res.status(400).json({ error: 'payment_amount is required and must be numeric' });
+            }
+        }
+
+        await ensurePaymentMethodColumn();
+
         const paymentCents = Math.round(payVal * 100);
         const totalCents = Math.round(computedTotal * 100);
-        if (paymentCents < totalCents) {
+        if (normalizedPaymentMethod !== 'cash on delivery' && paymentCents < totalCents) {
             console.log('PAYMENT DEBUG:', {
                 payment_amount: payVal,
                 computedTotal,
@@ -165,8 +216,8 @@ exports.createOrder = (req, res, next) => {
                     }
 
                     const { customer_id, email } = results[0];
-                    const orderInfoSql = 'INSERT INTO orderinfo (customer_id, date_placed, date_shipped, shipping, status) VALUES (?, ?, ?, ?, ?)';
-                    connection.execute(orderInfoSql, [customer_id, dateOrdered, dateShipped, shippingAmount, 'pending'], (err, result) => {
+                    const orderInfoSql = 'INSERT INTO orderinfo (customer_id, date_placed, date_shipped, shipping, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)';
+                    connection.execute(orderInfoSql, [customer_id, dateOrdered, dateShipped, shippingAmount, normalizedPaymentMethod, 'pending'], (err, result) => {
                         if (err) {
                             return connection.rollback(() => {
                                 return res.status(500).json({ error: 'Error inserting orderinfo', details: err });
@@ -223,6 +274,7 @@ exports.createOrder = (req, res, next) => {
                                     status: 'pending',
                                     total_due,
                                     payment_amount: Number(payVal).toFixed(2),
+                                    payment_method: normalizedPaymentMethod,
                                     change_due,
                                     cart
                                 });
@@ -258,6 +310,7 @@ exports.listOrders = async (req, res) => {
                    oi.shipping,
                    oi.shipping_address,
                    oi.shipping_zipcode,
+                   oi.payment_method,
                    oi.status,
                      GROUP_CONCAT(CONCAT(ol.quantity, ' x ', i.description_text) SEPARATOR ', ') AS items,
                    SUM(ol.quantity * i.sell_price) AS total_amount

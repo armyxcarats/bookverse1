@@ -172,16 +172,17 @@
       font-weight: 500;
       color: #1e293b;
     }
-    #paymentAmount {
-      width: 150px;
+    #paymentMethod {
+      min-width: 190px;
       padding: 10px 14px;
       border-radius: 40px;
       border: 1px solid #d1d9e6;
       background: white;
       font-size: 1rem;
       font-weight: 500;
+      color: #1e293b;
     }
-    #paymentAmount:focus {
+    #paymentMethod:focus {
       outline: 2px solid #1e293b;
       outline-offset: 1px;
       border-color: transparent;
@@ -214,6 +215,39 @@
       background: rgba(15, 23, 42, 0.65);
       z-index: 999;
       padding: 24px;
+    }
+    .delivery-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.65);
+      z-index: 1000;
+      padding: 24px;
+    }
+    .delivery-modal-card {
+      width: min(520px, 100%);
+      background: white;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+      text-align: left;
+    }
+    .delivery-modal-card h2 {
+      margin: 0 0 10px;
+      font-size: 1.6rem;
+    }
+    .delivery-modal-card p {
+      margin: 0 20px 22px;
+      color: #475569;
+      line-height: 1.6;
+    }
+    .delivery-modal-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
     .receipt-card {
       width: min(560px, 100%);
@@ -293,23 +327,51 @@
     <div class="pay-group">
       <button id="selectAllBtn" class="button button-secondary" type="button">Select all</button>
       <button id="paySelectedBtn" class="button button-primary" type="button">Pay</button>
-      <label>Amount you will pay:
-        <input id="paymentAmount" type="number" step="0.01" min="0" placeholder="0.00" autocomplete="off">
+      <label>Payment method:
+        <select id="paymentMethod">
+          <option value="gcash">GCash</option>
+          <option value="paymaya">PayMaya</option>
+          <option value="cash on delivery">Cash on Delivery</option>
+        </select>
       </label>
     </div>
   </div>
   <div id="cartMessage" class="message" style="display:none;"></div>
+  <div id="deliveryModal" class="delivery-modal" style="display:none;">
+    <div class="delivery-modal-card">
+      <h2>Delivery details required</h2>
+      <p>Please complete your delivery address, zip code, and phone number in your Profile before paying.</p>
+      <div class="delivery-modal-actions">
+        <button id="deliveryModalCloseBtn" class="button button-secondary" type="button">Close</button>
+        <a href="/profile" class="button button-primary">Go to Profile</a>
+      </div>
+    </div>
+  </div>
   <div id="receiptOverlay" class="receipt-overlay">
     <div class="receipt-card">
       <h2>Payment completed</h2>
       <p id="receiptMessage" style="margin:0 0 20px; color:#334155;">Your payment was successful.</p>
       <div class="receipt-row"><span>Selected total</span><strong id="receiptDue">₱0.00</strong></div>
+      <div class="receipt-row"><span>Payment method</span><strong id="receiptMethod">-</strong></div>
       <div class="receipt-row"><span>Amount paid</span><strong id="receiptTotal">₱0.00</strong></div>
       <div class="receipt-row"><span>Change</span><strong id="receiptChange">₱0.00</strong></div>
       <div class="receipt-actions">
         <button id="receiptCloseBtn" class="button button-secondary" type="button">Close</button>
         <a href="/my-orders" class="button button-primary">View My Orders</a>
         <a href="/" class="button button-secondary">Continue Shopping</a>
+      </div>
+    </div>
+  </div>
+  <div id="orderSummaryOverlay" class="receipt-overlay" style="display:none;">
+    <div class="receipt-card">
+      <h2>Order summary</h2>
+      <div id="orderSummaryContent" style="max-height:320px; overflow:auto; margin:12px 0 18px; color:#334155;"></div>
+      <div class="receipt-row"><span>Selected total</span><strong id="summaryDue">₱0.00</strong></div>
+      <div class="receipt-row"><span>Payment method</span><strong id="summaryMethod">-</strong></div>
+      <div class="receipt-row"><span>Quantity</span><strong id="summaryQty">0</strong></div>
+      <div class="receipt-actions">
+        <button id="summaryCloseBtn" class="button button-secondary" type="button">Cancel</button>
+        <button id="placeOrderBtn" class="button button-primary" type="button">Place order</button>
       </div>
     </div>
   </div>
@@ -358,13 +420,24 @@
     el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 5000);
   }
 
-  function showReceipt({ total, paid, change }) {
+  function showReceipt({ total, paid, change, paymentMethod }) {
     const overlay = document.getElementById('receiptOverlay');
     if (!overlay) return;
+    const methodLabel = paymentMethod === 'cash on delivery' ? 'Cash on Delivery' : paymentMethod === 'gcash' ? 'GCash' : paymentMethod === 'paymaya' ? 'PayMaya' : paymentMethod || '-';
     document.getElementById('receiptDue').textContent = `₱${Number(total).toFixed(2)}`;
+    document.getElementById('receiptMethod').textContent = methodLabel;
     document.getElementById('receiptTotal').textContent = `₱${Number(paid).toFixed(2)}`;
     document.getElementById('receiptChange').textContent = `₱${Number(change).toFixed(2)}`;
     overlay.style.display = 'flex';
+  }
+
+  function hasDeliveryDetails() {
+    const user = getStoredUser();
+    if (!user || !user.customer) return false;
+    const address = String(user.customer.addressline || '').trim();
+    const zipcode = String(user.customer.zipcode || '').trim();
+    const phone = String(user.customer.phone || '').trim();
+    return Boolean(address && zipcode && phone);
   }
 
   function hideReceipt() {
@@ -447,10 +520,7 @@
     `;
 
     attachCartEvents();
-    const paymentInput = document.getElementById('paymentAmount');
-    if (paymentInput) {
-      paymentInput.value = '';
-    }
+    updateCheckoutState();
   }
 
   // ------- attach events ----------
@@ -479,6 +549,10 @@
 
     document.getElementById('selectAll').removeEventListener('change', handleSelectAll);
     document.getElementById('selectAll').addEventListener('change', handleSelectAll);
+
+    const paymentMethodSelect = document.getElementById('paymentMethod');
+    paymentMethodSelect?.removeEventListener('change', updateCheckoutState);
+    paymentMethodSelect?.addEventListener('change', updateCheckoutState);
   }
 
   function handleQtyChange(e) {
@@ -535,12 +609,13 @@
       showMessage('Please select at least one item to pay.', 'error');
       return;
     }
+    
+    if (!hasDeliveryDetails()) {
+      showDeliveryModal();
+      return;
+    }
 
-    // Get payment amount from input and normalize it
-    const paymentInput = document.getElementById('paymentAmount');
-    const paymentAmount = Number.parseFloat(paymentInput.value);
-
-    // Calculate total for selected items only
+    const paymentMethod = document.getElementById('paymentMethod')?.value || 'gcash';
     const selectedTotal = selectedCart.reduce((sum, item) => {
         const price = Number.parseFloat(item.sell_price) || 0;
         const qty = Number.parseInt(item.quantity, 10) || 1;
@@ -548,75 +623,12 @@
       }, 0);
 
     const totalRounded = Number(selectedTotal.toFixed(2));
+    const isCod = paymentMethod === 'cash on delivery';
+    const paymentRounded = isCod ? 0 : totalRounded;
 
-    // Validate payment amount
-    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
-      showMessage('Please enter a valid payment amount.', 'error');
-      return;
-    }
-
-    const paymentRounded = Number(paymentAmount.toFixed(2));
-    const paymentCents = Math.round(paymentRounded * 100);
-    const totalCents = Math.round(totalRounded * 100);
-    if (paymentCents < totalCents) {
-      showMessage(`Insufficient payment. Selected items total: ₱${totalRounded.toFixed(2)}, you entered: ₱${paymentRounded.toFixed(2)}`, 'error');
-      return;
-    }
-
-    try {
-      payButton.disabled = true;
-      payButton.textContent = 'Processing...';
-
-      // `sell_price` is already stored as the effective price when item was added to cart.
-      const payloadCart = selectedCart.map(it => ({ ...it, sell_price: Number(it.sell_price || 0) }));
-
-      const res = await fetch('/api/v1/create-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken}`
-        },
-        body: JSON.stringify({
-          cart: payloadCart,
-          payment_amount: paymentRounded,
-          shipping_cost: 0
-        })
-      });
-
-      const responseText = await res.text();
-      let data = {};
-      try {
-        data = responseText ? JSON.parse(responseText) : {};
-      } catch (parseError) {
-        data.error = responseText || 'Unable to parse server response';
-      }
-
-      if (!res.ok) {
-        // If token invalid/expired, clear stored credentials and redirect to login
-        const tokenErr = (data && typeof data.error === 'string' && data.error.toLowerCase().includes('token')) || res.status === 401;
-        if (tokenErr) {
-          localStorage.removeItem('bookverseToken');
-          localStorage.removeItem('bookverseUser');
-          showMessage('Invalid or expired token. Redirecting to login...', 'error');
-          setTimeout(() => window.location.href = '/login', 1200);
-          return;
-        }
-
-        showMessage(data.error || `Checkout failed (${res.status})`, 'error');
-        return;
-      }
-
-      const remainingCart = allCart.filter(item => !item.selected);
-      saveCart(remainingCart);
-      renderCart();
-      const changeAmount = Number((paymentRounded - totalRounded).toFixed(2));
-      showReceipt({ total: totalRounded, paid: paymentRounded, change: changeAmount });
-    } catch (err) {
-      showMessage(err?.message || 'Checkout failed. Please try again later.', 'error');
-    } finally {
-      payButton.disabled = false;
-      payButton.textContent = 'Pay';
-    }
+    // Show order summary modal for confirmation
+    const payloadCart = selectedCart.map(it => ({ ...it, sell_price: Number(it.sell_price || 0) }));
+    showOrderSummary(payloadCart, totalRounded, paymentMethod, selectedCart.reduce((s, it) => s + (Number(it.quantity) || 0), 0));
   }
 
   // ----------- Bind global UI ----------
@@ -626,23 +638,103 @@
     const updated = cart.map(item => ({ ...item, selected: !allSelected }));
     saveCart(updated);
     renderCart();
+    updateCheckoutState();
   });
 
   document.getElementById('paySelectedBtn').addEventListener('click', checkout);
+  updateCheckoutState();
 
-  document.getElementById('paymentAmount').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      checkout();
-    }
-  });
+  function updateCheckoutState() {
+    const payButton = document.getElementById('paySelectedBtn');
+    const cart = getCart();
+    const selectedCount = cart.filter(item => item.selected).length;
+    if (!payButton) return;
+    payButton.disabled = selectedCount === 0;
+    payButton.title = selectedCount === 0 ? 'Select items to pay' : '';
+  }
 
   document.getElementById('receiptCloseBtn').addEventListener('click', hideReceipt);
   document.getElementById('receiptOverlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) hideReceipt();
   });
 
+  document.getElementById('deliveryModalCloseBtn').addEventListener('click', hideDeliveryModal);
+  document.getElementById('deliveryModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) hideDeliveryModal();
+  });
+
   renderCart();
+
+  function showDeliveryModal() {
+    const modal = document.getElementById('deliveryModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+  }
+
+  function hideDeliveryModal() {
+    const modal = document.getElementById('deliveryModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+  }
+
+  // -------- Order summary modal --------
+  function showOrderSummary(cartItems, total, paymentMethod, qty) {
+    const overlay = document.getElementById('orderSummaryOverlay');
+    const content = document.getElementById('orderSummaryContent');
+    if (!overlay || !content) return;
+    content.innerHTML = cartItems.map(it => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;"><div><strong>${it.description}</strong><div style="font-size:0.9rem;color:#64748b;">Qty: ${it.quantity}</div></div><div style="font-weight:700">₱${(Number(it.sell_price)||0).toFixed(2)}</div></div>`).join('');
+    document.getElementById('summaryDue').textContent = `₱${Number(total).toFixed(2)}`;
+    document.getElementById('summaryMethod').textContent = (paymentMethod === 'cash on delivery' ? 'Cash on Delivery' : paymentMethod === 'gcash' ? 'GCash' : paymentMethod === 'paymaya' ? 'PayMaya' : paymentMethod || '-');
+    document.getElementById('summaryQty').textContent = String(qty || 0);
+    overlay.style.display = 'flex';
+    // attach place order handler
+    const placeBtn = document.getElementById('placeOrderBtn');
+    placeBtn.dataset.payload = JSON.stringify({ cart: cartItems, payment_method: paymentMethod, payment_amount: (paymentMethod === 'cash on delivery' ? 0 : total), shipping_cost: 0 });
+  }
+
+  function hideOrderSummary() {
+    const overlay = document.getElementById('orderSummaryOverlay');
+    if (!overlay) return; overlay.style.display = 'none';
+  }
+
+  async function placeOrder() {
+    const btn = document.getElementById('placeOrderBtn');
+    const payloadData = btn?.dataset?.payload ? JSON.parse(btn.dataset.payload) : null;
+    if (!payloadData) return;
+    const userToken = localStorage.getItem('bookverseToken');
+    if (!userToken) { window.location.href = '/login'; return; }
+    try {
+      btn.disabled = true; btn.textContent = 'Placing...';
+      const res = await fetch('/api/v1/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+        body: JSON.stringify(payloadData)
+      });
+      const text = await res.text(); let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch (e) { data.error = text; }
+      if (!res.ok) {
+        showMessage(data.error || `Order failed (${res.status})`, 'error');
+        return;
+      }
+      // remove ordered items from cart and show receipt
+      const allCart = getCart();
+      const payloadIds = payloadData.cart.map(i => Number(i.item_id || i.id));
+      const remainingCart = allCart.filter(item => !payloadIds.includes(Number(item.item_id || item.id)));
+      saveCart(remainingCart);
+      renderCart();
+      hideOrderSummary();
+      const isCod = payloadData.payment_method === 'cash on delivery';
+      const changeAmount = isCod ? 0 : 0;
+      showReceipt({ total: payloadData.payment_amount || 0, paid: payloadData.payment_amount || 0, change: changeAmount, paymentMethod: payloadData.payment_method });
+    } catch (err) {
+      showMessage(err?.message || 'Unable to place order', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Place order';
+    }
+  }
+
+  document.getElementById('summaryCloseBtn').addEventListener('click', hideOrderSummary);
+  document.getElementById('placeOrderBtn').addEventListener('click', placeOrder);
 </script>
 </body>
 </html>

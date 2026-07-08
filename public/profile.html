@@ -165,6 +165,16 @@
       }
     }
 
+    function showMessageHtml(html, type = 'success', keepVisible = false) {
+      const msgEl = document.getElementById('message');
+      msgEl.innerHTML = html;
+      msgEl.className = `message ${type}`;
+      msgEl.classList.remove('hidden');
+      if (!keepVisible && type === 'success') {
+        setTimeout(() => msgEl.classList.add('hidden'), 3000);
+      }
+    }
+
     function renderUserActions() {
       const userActions = document.getElementById('userActions');
       const user = getStoredUser();
@@ -286,9 +296,14 @@
         localStorage.setItem('bookverseUser', JSON.stringify(updatedUser));
         currentUser = updatedUser;
 
-        showMessage('Profile updated successfully!', 'success');
+        // Refresh UI immediately so changes appear without manual reload
+        renderUserActions();
+        renderViewMode();
+        // Show a persistent success message with an action to view orders
+        const actionHtml = `Profile updated successfully! <a href="/my-orders" class="button button-secondary" style="margin-left:12px;padding:8px 12px;border-radius:6px;display:inline-block;">View My Orders</a>`;
+        // Show action briefly then auto-hide
+        showMessageHtml(actionHtml, 'success', false);
         uploadedPhotoFile = null;
-        setTimeout(cancelEdit, 1500);
       } catch (err) {
         showMessage('Error updating profile: ' + err.message, 'error');
       }

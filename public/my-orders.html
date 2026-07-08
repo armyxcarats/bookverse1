@@ -87,56 +87,7 @@
       return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
-    async function saveDeliveryDetails(orderId) {
-      const addressInput = document.getElementById(`delivery-address-${orderId}`);
-      const zipcodeInput = document.getElementById(`delivery-zipcode-${orderId}`);
-      const phoneInput = document.getElementById(`delivery-phone-${orderId}`);
-      const messageEl = document.getElementById(`delivery-message-${orderId}`);
-
-      if (!addressInput || !zipcodeInput || !phoneInput || !messageEl) return;
-      const address = addressInput.value.trim();
-      const zipcode = zipcodeInput.value.trim();
-      const phone = phoneInput.value.trim();
-
-      if (!address || !zipcode || !phone) {
-        messageEl.textContent = 'All fields are required.';
-        messageEl.className = 'message error';
-        messageEl.style.display = 'block';
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/v1/orders/${orderId}/shipping`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            shipping_address: address,
-            shipping_zipcode: zipcode,
-            shipping_phone: phone
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          messageEl.textContent = data.error || 'Unable to save delivery details.';
-          messageEl.className = 'message error';
-          messageEl.style.display = 'block';
-          return;
-        }
-
-        messageEl.textContent = 'Delivery details saved.';
-        messageEl.className = 'message';
-        messageEl.style.display = 'block';
-        loadMyOrders();
-      } catch (err) {
-        messageEl.textContent = 'Unable to save delivery details. Try again later.';
-        messageEl.className = 'message error';
-        messageEl.style.display = 'block';
-      }
-    }
+    // Delivery details are collected during checkout; remove inline editing here.
 
     async function loadMyOrders() {
       if (!token || !user) {
@@ -244,18 +195,7 @@
               </div>
             </div>
 
-            ${(!order.shipping_address || !order.shipping_zipcode || !order.shipping_phone) ? `
-            <div class="delivery-form" id="delivery-form-${order.order_id}" style="margin-top:16px; padding:16px; background:#fafafa; border:1px solid #eee; border-radius:12px;">
-              <h4 style="margin:0 0 12px;">Add delivery details</h4>
-              <div style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px;">
-                <input type="text" id="delivery-address-${order.order_id}" placeholder="Shipping address" style="padding:12px; border:1px solid #ddd; border-radius:10px;" />
-                <input type="text" id="delivery-zipcode-${order.order_id}" placeholder="Zip code" style="padding:12px; border:1px solid #ddd; border-radius:10px;" />
-                <input type="tel" id="delivery-phone-${order.order_id}" placeholder="Phone number" style="padding:12px; border:1px solid #ddd; border-radius:10px;" />
-              </div>
-              <button class="button button-primary" type="button" onclick="saveDeliveryDetails(${order.order_id})">Save delivery details</button>
-              <div id="delivery-message-${order.order_id}" class="message" style="display:none; margin-top:12px;"></div>
-            </div>
-            ` : ''}
+            <!-- Delivery details editing removed: details are set during checkout -->
 
             <div class="items-section">
               <h4>Items (${(order.order_items || []).length})</h4>
