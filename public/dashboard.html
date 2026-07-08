@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bookverse Admin Dashboard</title>
   <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { padding: 20px; }
     .dashboard-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 24px; }
     .card { background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 10px 20px rgba(0,0,0,.08); }
+    .chart-wrap { height: 320px; display:flex; align-items:center; justify-content:center; }
+    .chart-canvas { max-height: 100%; width:100%; }
     .card h2 { margin: 0 0 12px; font-size: 1.2rem; }
     .table-block { width: 100%; overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
@@ -131,11 +134,57 @@
         const areaRows = areas.rows || [];
         const itemRows = items.rows || [];
 
-        grid.innerHTML = [
-          renderTable('Monthly Sales', ['Month', 'Total'], salesRows.slice(0, 6), row => `<tr><td>${row.month || 'N/A'}</td><td>${formatCurrency(row.total)}</td></tr>`),
-          renderTable('Top Delivery Areas', ['Address', 'Orders'], areaRows.slice(0, 6), row => `<tr><td>${row.addressline || 'N/A'}</td><td>${row.total || 0}</td></tr>`),
-          renderTable('Best Selling Items', ['Item', 'Qty Sold'], itemRows.slice(0, 6), row => `<tr><td>${row.items || 'N/A'}</td><td>${row.total || 0}</td></tr>`)
-        ].join('');
+            // Prepare chart containers
+            const barCard = `
+              <div class="card">
+                <h2>Monthly Sales</h2>
+                <div class="chart-wrap"><canvas id="salesBar" class="chart-canvas"></canvas></div>
+              </div>
+            `;
+            const pieCard = `
+              <div class="card">
+                <h2>Top Items (by Qty Sold)</h2>
+                <div class="chart-wrap"><canvas id="itemsPie" class="chart-canvas"></canvas></div>
+              </div>
+            `;
+
+            // Tables
+            const salesTable = renderTable('Recent Monthly Sales', ['Month', 'Total'], salesRows.slice(0, 6), row => `<tr><td>${row.month || 'N/A'}</td><td>${formatCurrency(row.total)}</td></tr>`);
+            const areasTable = renderTable('Top Delivery Areas', ['Address', 'Orders'], areaRows.slice(0, 6), row => `<tr><td>${row.addressline || 'N/A'}</td><td>${row.total || 0}</td></tr>`);
+            const itemsTable = renderTable('Best Selling Items', ['Item', 'Qty Sold'], itemRows.slice(0, 6), row => `<tr><td>${row.items || 'N/A'}</td><td>${row.total || 0}</td></tr>`);
+
+            grid.innerHTML = [barCard, pieCard, salesTable, areasTable, itemsTable].join('');
+
+            // Build charts
+            try {
+              // Bar chart for monthly sales
+              const months = (salesRows || []).map(r => r.month || 'N/A');
+              const totals = (salesRows || []).map(r => Number(r.total || 0));
+              const ctxBar = document.getElementById('salesBar').getContext('2d');
+              new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                  labels: months,
+                  datasets: [{ label: 'Sales', data: totals, backgroundColor: '#7c2d12' }]
+                },
+                options: { maintainAspectRatio: false, responsive: true }
+              });
+
+              // Pie chart for top items
+              const itemLabels = (itemRows || []).map(r => r.items || 'Item');
+              const itemTotals = (itemRows || []).map(r => Number(r.total || 0));
+              const ctxPie = document.getElementById('itemsPie').getContext('2d');
+              new Chart(ctxPie, {
+                type: 'pie',
+                data: {
+                  labels: itemLabels,
+                  datasets: [{ data: itemTotals, backgroundColor: ['#7c2d12','#b91c1c','#f97316','#f59e0b','#10b981'] }]
+                },
+                options: { maintainAspectRatio: false, responsive: true }
+              });
+            } catch (chartErr) {
+              console.warn('Chart rendering failed', chartErr);
+            }
       } catch (err) {
         grid.innerHTML = '';
         showMessage(err.message || 'Unable to load dashboard');

@@ -381,7 +381,14 @@
   // ------- Helpers ----------
   function getStoredUser() {
     const raw = localStorage.getItem('bookverseUser');
-    return raw ? JSON.parse(raw) : null;
+    const user = raw ? JSON.parse(raw) : null;
+    if (user && user.deleted_at) {
+      localStorage.removeItem('bookverseToken');
+      localStorage.removeItem('bookverseUser');
+      window.location.href = '/login';
+      return null;
+    }
+    return user;
   }
 
   function getCartKey() {
@@ -590,26 +597,37 @@
 
   // ----------- PAY / CHECKOUT - FIXED -----------
   async function checkout() {
-    const userToken = localStorage.getItem('bookverseToken');
-    const userRaw = localStorage.getItem('bookverseUser');
-    const payButton = document.getElementById('paySelectedBtn');
-    
-    // Get ALL items from cart
-    const allCart = getCart();
-    
-    // Filter to ONLY selected items (checked checkboxes)
-    const selectedCart = allCart.filter(item => item.selected === true);
-
-    if (!userToken || !userRaw) {
+    const user = getStoredUser();
+    if (!user || !user.id) {
       window.location.href = '/login';
       return;
     }
-    
+
+    if (!user.deleted_at) {
+      const token = localStorage.getItem('bookverseToken');
+      if (token) {
+        const meRes = await fetch('/api/v1/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!meRes.ok) {
+          localStorage.removeItem('bookverseToken');
+          localStorage.removeItem('bookverseUser');
+          const data = await meRes.json().catch(() => ({}));
+          showMessage(data.error || data.message || 'Your account has been deactivated. Please contact the admin first.', 'error');
+          window.location.href = '/login';
+          return;
+        }
+      }
+    }
+
+    const allCart = getCart();
+    const selectedCart = allCart.filter(item => item.selected === true);
+
     if (!selectedCart.length) {
       showMessage('Please select at least one item to pay.', 'error');
       return;
     }
-    
+
     if (!hasDeliveryDetails()) {
       showDeliveryModal();
       return;
@@ -701,6 +719,8 @@
     const btn = document.getElementById('placeOrderBtn');
     const payloadData = btn?.dataset?.payload ? JSON.parse(btn.dataset.payload) : null;
     if (!payloadData) return;
+    const user = getStoredUser();
+    if (!user || !user.id) { window.location.href = '/login'; return; }
     const userToken = localStorage.getItem('bookverseToken');
     if (!userToken) { window.location.href = '/login'; return; }
     try {
@@ -710,6 +730,14 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
         body: JSON.stringify(payloadData)
       });
+      if (res.status === 403) {
+        localStorage.removeItem('bookverseToken');
+        localStorage.removeItem('bookverseUser');
+        const data = await res.json().catch(() => ({}));
+        showMessage(data.error || data.message || 'Your account has been deactivated. Please contact the admin first.', 'error');
+        window.location.href = '/login';
+        return;
+      }
       const text = await res.text(); let data = {};
       try { data = text ? JSON.parse(text) : {}; } catch (e) { data.error = text; }
       if (!res.ok) {

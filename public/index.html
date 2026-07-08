@@ -10,14 +10,50 @@
     .genre-group-title { margin: 0 0 16px; font-size: 1.5rem; color: #432222; }
     .book-card-genre { color: #7a5c3f; font-size: 0.9rem; margin: 8px 0; }
     .book-card { cursor: pointer; }
-    .book-preview-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,255,255,0.97); z-index: 50; }
+    .book-preview-modal { position: fixed; inset: 0; display: none; align-items: flex-start; justify-content: center; background: rgba(255,255,255,0.97); z-index: 50; overflow-y: auto; padding: 24px 16px; }
     .book-preview-modal.open { display: flex; }
-    .book-preview-card { width: min(840px, calc(100% - 40px)); background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.16); display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-    .book-preview-card img { width: 100%; height: 100%; object-fit: cover; }
-    .book-preview-content { padding: 28px; display: flex; flex-direction: column; gap: 16px; background: #fff; }
+    .book-preview-card { width: min(960px, calc(100% - 40px)); max-width: 960px; min-height: 0; max-height: calc(100vh - 48px); background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.16); display: grid; grid-template-columns: minmax(260px, 380px) minmax(380px, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 24px; min-width: 0; align-items: stretch; }
+    .book-preview-card > img { width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 220px); display: block; margin: auto; object-fit: contain; object-position: center; background: #f7f6f4; transition: none; cursor: default; min-width: 0; min-height: 240px; }
+    .book-preview-card > img[src=''] { display: none; }
+    .book-preview-left { display: flex; flex-direction: column; gap: 18px; padding: 18px; box-sizing: border-box; }
+    .book-preview-left img { width: 100%; height: auto; max-height: calc(100vh - 360px); object-fit: contain; display: block; }
+    .book-preview-left .preview-review-section { overflow: auto; max-height: calc(100vh - 460px); }
+    @media (max-width: 980px) {
+      .book-preview-card { grid-template-columns: 1fr; height: auto; max-height: calc(100vh - 40px); min-height: 420px; }
+      .book-preview-card > img { width: 100%; height: auto; min-height: 220px; max-height: 34vh; object-fit: contain; object-position: center; }
+    }
+    .book-preview-content { padding: 20px; display: grid; grid-template-rows: 1fr auto; gap: 16px; background: #fff; height: 100%; max-height: 100%; overflow: hidden; min-width: 0; min-height: 0; position: relative; }
+    .book-preview-body { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 16px; max-height: 100%; }
+    .book-preview-actionbar { position: sticky; bottom: 0; background: #fff; padding: 16px 24px 24px; border-top: 1px solid #ececec; box-shadow: inset 0 1px 0 rgba(0,0,0,0.06); z-index: 10; }
+    .book-preview-body p, .book-preview-body h2, .book-preview-body .book-card-genre, .book-preview-body .review-list { max-width: 100%; }
+    .preview-thumbs { display:flex; gap:12px; margin-top:16px; overflow-x:auto; padding: 12px 0; max-width: 100%; }
+    .preview-thumbs::-webkit-scrollbar { height: 8px; }
+    .preview-thumbs::-webkit-scrollbar-thumb { background: rgba(100, 13, 20, 0.20); border-radius: 999px; }
+    .book-preview-content .preview-thumb { width: 120px; height: 160px; object-fit: contain; cursor:pointer; border-radius:14px; border:1px solid rgba(229, 231, 235, 0.9); flex:0 0 auto; background: #fff; padding: 6px; }
+    .book-preview-content .preview-thumb:hover { transform: scale(1.02); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+    .preview-review-section { border-top: 1px solid #eee; padding-top: 18px; }
+    .preview-review-section h3 { margin: 0 0 12px; font-size: 1rem; }
+    .preview-review-section .review-list { margin-top: 0; }
+    .book-preview-actionbar .book-preview-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 0; justify-content: flex-start; }
+    .book-preview-actionbar .book-preview-buttons button { min-width: 120px; }
     .book-preview-close { position: absolute; top: 20px; right: 24px; padding: 12px 16px; border-radius: 999px; border: none; background: white; cursor: pointer; font-size: 1rem; }
     .book-preview-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; }
-    .book-preview-description { line-height: 1.7; color: #333; }
+    .book-preview-description { line-height: 1.6; color: #444; font-size: 0.98rem; margin-top: 8px; }
+    .reviews-shell { display: grid; gap: 24px; margin-top: 28px; }
+    .review-form { background: #fff; border: 1px solid rgba(100, 13, 20, 0.12); border-radius: 24px; padding: 24px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06); }
+    .review-form .rating-control { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .review-form .rating-control label { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #374151; font-size: 0.95rem; }
+    .review-form .rating-control input { display: none; }
+    .review-form .rating-control .star { font-size: 1.8rem; color: #d1d5db; transition: color 0.2s ease; }
+    .review-form .rating-control input:checked + .star,
+    .review-form .rating-control label:hover .star { color: #b91c1c; }
+    .review-list { display: grid; gap: 16px; margin-top: 16px; }
+    .review-card { background: #fff; border: 1px solid rgba(100, 13, 20, 0.12); border-radius: 20px; padding: 18px; }
+    .review-card-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .review-card h4 { margin: 0; font-size: 1.1rem; }
+    .review-stars { color: #b91c1c; font-size: 1.05rem; letter-spacing: 0.05em; }
+    .review-author { color: #6b7280; font-size: 0.9rem; margin-top: 12px; }
+    .review-form button { margin-top: 18px; }
   </style>
 </head>
 <body>
@@ -39,7 +75,6 @@
       <a href="#" class="nav-link active" data-section="books">BOOKS</a>
       <a href="#" class="nav-link" data-section="bestsellers">BESTSELLERS</a>
       <a href="#" class="nav-link" data-section="collections">COLLECTIONS</a>
-      <a href="#" class="nav-link" data-section="book-reviews">BOOK REVIEWS</a>
       <a href="#" class="nav-link" data-section="new-section">NEW!</a>
       <a href="#" class="nav-link" data-section="preorders">PRE-ORDERS</a>
       <a href="#" class="nav-link" data-section="sale">SALE</a>
@@ -63,12 +98,6 @@
       <div id="bestSellers" class="book-grid"></div>
     </section>
 
-    <section class="trending-section hidden-section" id="book-reviews">
-      <div class="trending-header">
-        <h2>Book Reviews</h2>
-      </div>
-      <p class="section-description">Once a book has been ordered and delivered, customers can leave a review. Reviews may include a 1–5 star rating or a written comment about the reading experience.</p>
-    </section>
 
     <section class="trending-section hidden-section" id="new-section">
       <div class="trending-header">
@@ -95,23 +124,38 @@
   </main>
 
   <div id="bookPreviewModal" class="book-preview-modal" aria-hidden="true">
-    <div class="book-preview-card">
-      <img id="previewImage" src="" alt="Book preview image" />
-      <div class="book-preview-content">
-        <button class="book-preview-close" type="button" onclick="closeBookPreview()">✕</button>
-        <h2 id="previewTitle"></h2>
-        <div id="previewGenre" class="book-card-genre"></div>
-        <div id="previewAuthor" style="font-weight:600;color:#5b4a3d;"></div>
-        <div id="previewPrice" style="font-size:1.3rem;font-weight:700;color:#2f2f2f;"></div>
-        <p id="previewDescription" class="book-preview-description"></p>
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
-          <label style="display:flex; align-items:center; gap:8px; margin:0;">Qty:<input id="previewQuantity" type="number" min="1" value="1" style="width:64px; padding:8px; border-radius:10px; border:1px solid #ddd;" /></label>
-          <div id="previewStockInfo" style="font-size:0.95rem; color:#555;">Available: 1+</div>
+      <div class="book-preview-card">
+        <div class="book-preview-left">
+          <img id="previewImage" src="" alt="Book preview image" />
+          <div id="previewReviewSection" class="preview-review-section" style="margin-top:12px;">
+            <h3 style="margin:0 0 12px; font-size:1rem; color:#1f2937;">Customer Reviews</h3>
+            <div id="previewReviewList" class="review-list" style="margin-top:0;"></div>
+            <div id="previewReviewFormContainer" class="review-form" style="margin-top:12px;"></div>
+          </div>
         </div>
-        <div id="previewQuantityError" style="color:#b3312c; font-size:0.95rem; display:none; margin-top:8px;"></div>
-        <div class="book-preview-buttons">
-          <button class="button button-primary" id="previewAddBtn" type="button">Add to cart</button>
-          <button class="button button-secondary" type="button" onclick="closeBookPreview()">Back to shopping</button>
+        <div class="book-preview-content">
+          <button class="book-preview-close" type="button" onclick="closeBookPreview()">✕</button>
+          <div class="book-preview-body">
+            <h2 id="previewTitle"></h2>
+            <div id="previewGenre" class="book-card-genre"></div>
+            <div id="previewAuthor" style="font-weight:600;color:#5b4a3d;"></div>
+            <div id="previewPrice" style="font-size:1.3rem;font-weight:700;color:#2f2f2f;"></div>
+            <p id="previewDescription" class="book-preview-description"></p>
+            <div id="previewThumbs" class="preview-thumbs" aria-hidden="false"></div>
+            <div id="previewQuantityError" style="color:#b3312c; font-size:0.95rem; display:none; margin-top:8px;"></div>
+          </div>
+          <div class="book-preview-actionbar">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:8px; margin:0; font-weight:600;">Qty:
+              <input id="previewQuantity" type="number" min="1" value="1" style="width:70px; padding:10px; border-radius:10px; border:1px solid #ddd;" />
+            </label>
+            <div id="previewStockInfo" style="font-size:0.95rem; color:#555;">Available: 1+</div>
+          </div>
+          <div class="book-preview-buttons">
+            <button class="button button-primary" id="previewAddBtn" type="button">Add to cart</button>
+            <button class="button button-secondary" type="button" onclick="closeBookPreview()">Back to shopping</button>
+            <button class="button button-primary" id="previewBuyBtn" type="button" style="background:#1f2937; color:#fff;">Buy now</button>
+          </div>
         </div>
       </div>
     </div>
@@ -148,24 +192,87 @@
     const searchButton = document.querySelector('.search-button');
     let loadedItems = [];
 
-    const sampleBooks = [
-      { id: 1, title: 'The Secret Chapter', author: 'A. Developer', genre: 'Fiction', sell_price: 24.99, sale: 25, description_text: 'A mysterious novel about a hidden manuscript that changes the life of a young reader. It blends humor, suspense, and subtle lessons for anyone who enjoys thoughtful fiction.', img_path: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80', pages: 312, popularity: 85, isNew: false, isDelivered: true },
-      { id: 2, title: 'Node.js in Action', author: 'M. Johnson', genre: 'Technology', sell_price: 29.50, description_text: 'This hands-on guide walks you through building modern Node.js applications with real-world examples and best practices. Great for developers who want to make server-side JavaScript powerful and productive.', img_path: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=800&q=80', pages: 396, popularity: 93, isNew: true, isDelivered: false },
-      { id: 3, title: 'Design Patterns for Web Apps', author: 'K. Smith', genre: 'Technology', sell_price: 21.00, sale: 25, description_text: 'A practical introduction to design patterns that help you build scalable and maintainable web applications. The book explains each pattern with code samples and real architecture advice.', img_path: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80', pages: 288, popularity: 78, isNew: false, isDelivered: true },
-      { id: 4, title: 'MySQL & Sequelize Guide', author: 'R. Patel', genre: 'Technology', sell_price: 26.75, description_text: 'A complete walkthrough for building Node.js apps with MySQL using Sequelize ORM. It covers schema modeling, associations, queries, and deployment with clear examples.', img_path: 'https://images.unsplash.com/photo-1517430816045-df4b7de45f8f?auto=format&fit=crop&w=800&q=80', pages: 256, popularity: 65, isNew: true, isDelivered: true },
-      { id: 5, title: 'E-commerce UX Essentials', author: 'T. Cooper', genre: 'Business', sell_price: 18.90, description_text: 'A practical resource for designing great online shopping experiences. Learn how product pages, checkout flows, and search interactions boost sales and customer satisfaction.', img_path: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=800&q=80', pages: 224, popularity: 90, isNew: false, isDelivered: true },
-      { id: 6, title: 'Practical API Design', author: 'L. Monroe', genre: 'Business', sell_price: 32.00, description_text: 'A thoughtful book on designing clean APIs for modern apps. It explains principles for reliable endpoints, versioning, error handling, and developer-friendly documentation.', img_path: 'https://images.unsplash.com/photo-1485217988980-11786ced9454?auto=format&fit=crop&w=800&q=80', pages: 340, popularity: 74, isNew: true, isDelivered: false }
-    ];
+    async function loadItemsFromApi() {
+      try {
+        const res = await fetch('/api/v1/items');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && Array.isArray(data.rows)) {
+          loadedItems = data.rows.map(i => {
+            // ensure ItemImages normalized
+            if (Array.isArray(i.ItemImages)) {
+              i.ItemImages = i.ItemImages.map(im => ({ ...im, file_path: im.file_path || im.filePath || im.filePath }));
+            }
+            return i;
+          });
+          renderBooks(loadedItems);
+        }
+      } catch (e) {
+        console.error('Failed to load items from API', e);
+      }
+    }
 
-    const sampleReviews = [
-      { id: 1, bookId: 1, bookTitle: 'The Secret Chapter', rating: 5, comment: 'Loved the storytelling and pacing. Highly recommended for anyone starting a new reading habit.', reviewer: 'Jane' },
-      { id: 2, bookId: 3, bookTitle: 'Design Patterns for Web Apps', rating: 4, comment: 'Helpful examples and clear structure. A solid guide for web developers.', reviewer: 'Mark' }
-    ];
+    const sampleBooks = [];
 
-    const reviewForm = document.getElementById('reviewForm');
-    const reviewList = document.getElementById('reviewList');
-    const reviewBookSelect = document.getElementById('reviewBook');
-    const reviewMessageBox = document.getElementById('reviewMessage');
+    const previewReviewFormContainer = document.getElementById('previewReviewFormContainer');
+    let badWords = ['burot', 'tangina', 'puta', 'pikachu'];
+    let badWordsLoaded = false;
+    let currentPreviewItemId = null;
+    let itemReviewSummaries = {};
+
+    async function loadBadWords() {
+      if (badWordsLoaded) return;
+      try {
+        const response = await fetch('/badwords.json');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data)) {
+            badWords = data.map(word => word.toString().trim().toLowerCase()).filter(Boolean);
+          }
+        }
+      } catch (e) {
+        console.warn('Unable to load bad words:', e);
+      }
+      badWordsLoaded = true;
+    }
+
+    async function getDeliveredItemIds() {
+      const token = localStorage.getItem('bookverseToken');
+      if (!token) return new Set();
+
+      try {
+        const res = await fetch('/api/v1/orders', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) return new Set();
+        const orders = await res.json();
+
+        const deliveredOrders = Array.isArray(orders)
+          ? orders.filter(order => String(order.status || '').toLowerCase() === 'delivered')
+          : [];
+
+        const ids = new Set();
+        await Promise.all(deliveredOrders.map(async order => {
+          try {
+            const itemRes = await fetch(`/api/v1/orders/${order.order_id}/items`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!itemRes.ok) return;
+            const items = await itemRes.json();
+            (items || []).forEach(item => {
+              const id = item.item_id || item.id;
+              if (id) ids.add(Number(id));
+            });
+          } catch (error) {
+            // ignore individual order item fetch errors
+          }
+        }));
+        return ids;
+      } catch (error) {
+        console.warn('Unable to fetch delivered item ids:', error);
+        return new Set();
+      }
+    }
 
     function getStoredUser() {
       const raw = localStorage.getItem('bookverseUser');
@@ -175,6 +282,14 @@
     function getCartKey() {
       const user = getStoredUser();
       return user && user.id ? `bookverseCart_user_${user.id}` : 'bookverseCart_guest';
+    }
+
+    function updateBookCardReviewLabel(itemId, count, average) {
+      const reviewLabel = document.querySelector(`.book-card-review[data-item-id="${itemId}"]`);
+      if (!reviewLabel) return;
+      const stars = '★'.repeat(Math.round(average || 5)) + '☆'.repeat(5 - Math.round(average || 5));
+      reviewLabel.textContent = `${stars} ${count} review${count === 1 ? '' : 's'}`;
+      reviewLabel.style.opacity = 1;
     }
 
     function getCart() {
@@ -195,18 +310,77 @@
       }
     }
 
-    function ensureLoggedInForCart() {
+    function clearDeactivatedSession() {
+      localStorage.removeItem('bookverseToken');
+      localStorage.removeItem('bookverseUser');
+    }
+
+    async function verifyActiveUser() {
       const user = getStoredUser();
-      if (!user || !user.id) {
+      const token = localStorage.getItem('bookverseToken');
+      if (!user || !user.id || !token) {
+        clearDeactivatedSession();
         showMessage('Please login or register before adding items to the cart.', 'error');
         window.location.href = '/login';
         return false;
       }
+      if (user.deleted_at) {
+        clearDeactivatedSession();
+        showMessage('You have been deactivated by the admin. Please contact the admin first.', 'error');
+        window.location.href = '/login';
+        return false;
+      }
+
+      try {
+        const res = await fetch('/api/v1/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          clearDeactivatedSession();
+          const data = await res.json().catch(() => ({}));
+          showMessage(data.error || data.message || 'Your session is no longer valid.', 'error');
+          window.location.href = '/login';
+          return false;
+        }
+        const data = await res.json();
+        if (data.user) {
+          localStorage.setItem('bookverseUser', JSON.stringify({ ...user, ...data.user }));
+        }
+      } catch (err) {
+        console.warn('Unable to verify user session', err);
+      }
       return true;
     }
 
-    function addToCart(item) {
-      if (!ensureLoggedInForCart()) return;
+    async function checkUserOnLoad() {
+      const user = getStoredUser();
+      const token = localStorage.getItem('bookverseToken');
+      if (!user || !token) return;
+      if (user.deleted_at) {
+        clearDeactivatedSession();
+        window.location.href = '/login';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          clearDeactivatedSession();
+          window.location.href = '/login';
+        }
+      } catch (err) {
+        console.warn('Unable to verify user session on load', err);
+      }
+    }
+
+    function ensureLoggedInForCart() {
+      return verifyActiveUser();
+    }
+
+    async function addToCart(item) {
+      if (!(await verifyActiveUser())) return;
 
       const cart = getCart();
       const id = item.item_id || item.id;
@@ -234,6 +408,18 @@
       openSideCart();
     }
 
+    function getItemReviewSummary(item) {
+      const id = Number(item.item_id || item.id);
+      const summary = itemReviewSummaries[id];
+      const count = Number(item.reviewCount || (summary && summary.count) || 0);
+      const average = Number(item.reviewAverage || (summary && summary.average) || 0);
+      if (count > 0) {
+        const stars = '★'.repeat(Math.round(average || 5)) + '☆'.repeat(5 - Math.round(average || 5));
+        return `${stars} ${count} review${count === 1 ? '' : 's'}`;
+      }
+      return 'Review available after delivery';
+    }
+
     function renderBookCard(item) {
       const title = item.description || item.title || 'Untitled book';
       const author = item.author || item.subtitle || 'Unknown author';
@@ -255,9 +441,11 @@
         sale = `<span class="book-card-badge">${item.sale}% OFF</span>`;
       }
       const genreLabel = item.genre ? `<div class="book-card-genre">${item.genre}</div>` : '';
+      const reviewSummary = getItemReviewSummary(item);
+      const id = item.item_id || item.id;
       const itemData = encodeURIComponent(JSON.stringify(item));
       return `
-          <article class="book-card" onclick="showBookPreview(JSON.parse(decodeURIComponent('${itemData}')))">
+          <article class="book-card" data-item-id="${id}" onclick="showBookPreview(JSON.parse(decodeURIComponent('${itemData}')))">
             <img src="${image}" alt="${title}" />
             <div class="book-card-body">
               ${sale}
@@ -265,7 +453,7 @@
               <p class="book-card-author">${author}</p>
               ${genreLabel}
               <p class="book-card-description">${snippet}</p>
-              <div class="book-card-meta"><span>${pages} pages</span><span>⭐ 4.5</span></div>
+              <div class="book-card-meta"><span>${pages} pages</span><span class="book-card-review" data-item-id="${id}" style="opacity:0.5;">${reviewSummary}</span></div>
               <div style="margin-top:8px; font-weight:700;">${displayPrice}${originalPriceHtml}</div>
               <div class="book-preview-buttons" style="margin-top: 16px; display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="button button-primary" type="button" onclick="event.stopPropagation(); addToCart(JSON.parse(decodeURIComponent('${itemData}')))">Add to cart</button>
@@ -279,7 +467,7 @@
       targetContainer.innerHTML = items.map(renderBookCard).join('');
     }
 
-    function showBookPreview(item) {
+    async function showBookPreview(item) {
       const title = item.description || item.title || 'Untitled book';
       const image = item.img_path || item.image || 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80';
       const author = item.author || item.subtitle || 'Unknown author';
@@ -291,15 +479,31 @@
       const originalHtml = (isOnSale && originalPriceValue) ? ` <small style="text-decoration:line-through;color:#777;">₱${originalPriceValue.toFixed(2)}</small>` : '';
       const description = item.description_text || 'No description available yet.';
 
-      document.getElementById('previewImage').src = image;
-      document.getElementById('previewImage').alt = title;
+      // If item has multiple images, populate gallery
+      const galleryMain = document.getElementById('previewImage');
+      const galleryThumbs = document.getElementById('previewThumbs');
+
+      // Determine images array: prefer ItemImages, fallback to img_path
+      const images = Array.isArray(item.ItemImages) && item.ItemImages.length ? item.ItemImages.map(im => im.file_path || im.filePath || im.file_path) : [(item.img_path || item.image)];
+
+      galleryThumbs.innerHTML = images.map((src, idx) => `<img class="preview-thumb" src="${src}" data-idx="${idx}" alt="thumb-${idx}" />`).join('');
+      galleryMain.src = images[0] || image;
+      galleryMain.alt = title;
       document.getElementById('previewTitle').textContent = title;
       document.getElementById('previewGenre').textContent = genre;
+      const previewCard = document.querySelector('.book-preview-card');
+      if (galleryMain) {
+        galleryMain.style.cursor = 'default';
+        galleryMain.onclick = null;
+      }
       document.getElementById('previewAuthor').textContent = `By ${author}`;
       const stockLimit = item.Stock?.quantity != null ? Number(item.Stock.quantity) : null;
       document.getElementById('previewPrice').innerHTML = price + originalHtml;
       document.getElementById('previewDescription').textContent = description;
       document.getElementById('previewStockInfo').textContent = stockLimit != null ? `Available: ${stockLimit}` : 'Available: 1+';
+      const itemId = item.item_id || item.id;
+      await loadPreviewReviews(itemId);
+      await renderPreviewReviewForm(itemId);
       const quantityInput = document.getElementById('previewQuantity');
       const quantityError = document.getElementById('previewQuantityError');
       quantityInput.value = 1;
@@ -328,6 +532,23 @@
         addToCart({ ...item, quantity: qty, stock_quantity: stockLimit });
         closeBookPreview();
       };
+      document.getElementById('previewBuyBtn').onclick = () => {
+        const qty = Math.max(1, Number(quantityInput.value) || 1);
+        if (stockLimit != null && qty > stockLimit) {
+          quantityError.textContent = `Only ${stockLimit} available for this item.`;
+          quantityError.style.display = 'block';
+          return;
+        }
+        addToCart({ ...item, quantity: qty, stock_quantity: stockLimit });
+        window.location.href = '/cart';
+      };
+      // Thumbnail click swaps main image
+      galleryThumbs.querySelectorAll('.preview-thumb').forEach(imgEl => {
+        imgEl.addEventListener('click', (e) => {
+          const idx = Number(e.currentTarget.dataset.idx || 0);
+          galleryMain.src = images[idx];
+        });
+      });
       const modal = document.getElementById('bookPreviewModal');
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
@@ -376,14 +597,36 @@
         renderBestSellers(items);
         renderNewArrivals(items);
         renderSaleBooks(items);
-        initReviewForm(items);
+        maybeOpenRedirectPreview();
       } catch (error) {
         loadedItems = sampleBooks;
         renderGenreCollections(sampleBooks);
         renderBestSellers(sampleBooks);
         renderNewArrivals(sampleBooks);
         renderSaleBooks(sampleBooks);
-        initReviewForm(sampleBooks);
+        maybeOpenRedirectPreview();
+      }
+    }
+
+    function maybeOpenRedirectPreview() {
+      const rawRedirect = localStorage.getItem('bookverseReviewRedirect');
+      if (!rawRedirect) return;
+
+      try {
+        const redirect = JSON.parse(rawRedirect);
+        const itemId = Number(redirect?.itemId);
+        if (!itemId) {
+          localStorage.removeItem('bookverseReviewRedirect');
+          return;
+        }
+        const item = loadedItems.find(i => Number(i.item_id || i.id) === itemId);
+        if (item) {
+          showBookPreview(item);
+        }
+      } catch (error) {
+        console.warn('Invalid review redirect payload:', error);
+      } finally {
+        localStorage.removeItem('bookverseReviewRedirect');
       }
     }
 
@@ -440,6 +683,7 @@
       userActions.innerHTML = `
         <span class="user-greeting">Hello, ${user.name || 'Customer'}</span>
         <a href="/profile">My Account</a>
+        <a href="/my-orders">My Orders</a>
         ${adminLink}
         <a href="/cart" class="cart">Cart <span id="cartCount">0</span></a>
         <a href="#" id="logoutButton">Logout</a>
@@ -454,9 +698,11 @@
     }
 
     loadBooksButton.addEventListener('click', loadBooks);
-    renderUserActions();
-    updateCartCount();
-    loadBooks();
+    checkUserOnLoad().then(() => {
+      renderUserActions();
+      updateCartCount();
+      loadBooks();
+    });
 
     if (searchButton) searchButton.addEventListener('click', performSearch);
     if (searchInput) searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') performSearch(); });
@@ -508,67 +754,143 @@
       }
     }
 
-    function populateReviewBookOptions(items) {
-      const deliveredBooks = items.filter(item => item.isDelivered);
-      if (!reviewBookSelect) return;
-      reviewBookSelect.innerHTML = deliveredBooks.length
-        ? `<option value="">Select delivered book</option>${deliveredBooks.map(book => `<option value="${book.id}">${book.title}</option>`).join('')}`
-        : '<option value="">No delivered books available</option>';
+    function sanitizeBadWords(text) {
+      if (!text || typeof text !== 'string') return text;
+      return badWords.reduce((current, badWord) => {
+        const pattern = new RegExp(`\\b${badWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+        return current.replace(pattern, match => '*'.repeat(match.length));
+      }, text);
     }
 
-    function renderReviewList() {
-      if (!reviewList) return;
-      reviewList.innerHTML = sampleReviews.map(review => {
-        return `
-          <article class="review-card">
-            <div class="review-card-header">
-              <h4>${review.bookTitle}</h4>
-              <span class="review-stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</span>
-            </div>
-            <p>${review.comment}</p>
-            <div class="review-author">Reviewed by ${review.reviewer}</div>
-          </article>
-        `;
-      }).join('') || '<p class="section-description">No reviews yet. Be the first to review a delivered book.</p>';
+    function containsBadWords(text) {
+      if (!text || typeof text !== 'string') return false;
+      return badWords.some(badWord => new RegExp(`\\b${badWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text));
     }
 
-    function initReviewForm(items) {
-      populateReviewBookOptions(items);
-      renderReviewList();
-      if (reviewForm) {
-        reviewForm.addEventListener('submit', handleReviewSubmit);
-      }
-    }
-
-    function handleReviewSubmit(event) {
-      event.preventDefault();
-      if (!reviewBookSelect || !reviewMessageBox) return;
-      const bookId = Number(reviewBookSelect.value);
-      const ratingInput = document.querySelector('input[name="rating"]:checked');
-      const rating = ratingInput ? Number(ratingInput.value) : 5;
-      const comment = document.getElementById('reviewComment').value.trim();
-      if (!bookId || !comment) {
-        reviewMessageBox.textContent = 'Please select a delivered book and enter your comment.';
-        reviewMessageBox.className = 'message error';
-        reviewMessageBox.style.display = 'block';
+    function renderPreviewReviewSection(reviews) {
+      const previewReviewList = document.getElementById('previewReviewList');
+      if (!previewReviewList) return;
+      if (!Array.isArray(reviews) || reviews.length === 0) {
+        previewReviewList.innerHTML = '<p class="section-description" style="margin:0;">No reviews yet for this book. Be the first to leave one after delivery.</p>';
         return;
       }
-      const book = (loadedItems.length ? loadedItems : sampleBooks).find(item => item.id === bookId);
-      const newReview = {
-        id: sampleReviews.length + 1,
-        bookId,
-        bookTitle: book ? book.title : 'Unknown book',
-        rating,
-        comment,
-        reviewer: 'Customer'
-      };
-      sampleReviews.unshift(newReview);
-      renderReviewList();
-      reviewForm.reset();
-      reviewMessageBox.textContent = 'Thank you! Your review was submitted.';
-      reviewMessageBox.className = 'message success';
-      reviewMessageBox.style.display = 'block';
-      setTimeout(() => { reviewMessageBox.style.display = 'none'; }, 3000);
+      previewReviewList.innerHTML = reviews.map(review => `
+        <article class="review-card" style="margin-bottom:14px;">
+          <div class="review-card-header">
+            <h4 style="font-size:1rem; margin:0;">${review.reviewer || 'Customer'}</h4>
+            <span class="review-stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</span>
+          </div>
+          <p style="margin:12px 0 0;">${review.comment}</p>
+          <div class="review-author" style="margin-top:10px;">${new Date(review.created_at || review.createdAt || Date.now()).toLocaleDateString()}</div>
+        </article>
+      `).join('');
+    }
+
+    async function loadPreviewReviews(itemId) {
+      if (!itemId) {
+        renderPreviewReviewSection([]);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/v1/reviews?itemId=${itemId}`);
+        if (!response.ok) {
+          renderPreviewReviewSection([]);
+          return;
+        }
+        const reviews = await response.json();
+        const normalizedReviews = Array.isArray(reviews) ? reviews : [];
+        const count = normalizedReviews.length;
+        const sum = normalizedReviews.reduce((total, review) => total + (Number(review.rating) || 0), 0);
+        const average = count ? sum / count : 0;
+        itemReviewSummaries[itemId] = { count, average, sum };
+        if (count) {
+          updateBookCardReviewLabel(itemId, count, average);
+        }
+        renderPreviewReviewSection(normalizedReviews);
+      } catch (error) {
+        console.warn('Unable to load preview reviews:', error);
+        renderPreviewReviewSection([]);
+      }
+    }
+
+    async function canReviewItem(itemId) {
+      if (!itemId) return false;
+      const deliveredIds = await getDeliveredItemIds();
+      return deliveredIds.has(Number(itemId));
+    }
+
+    async function renderPreviewReviewForm(itemId) {
+      if (!previewReviewFormContainer) return;
+      currentPreviewItemId = itemId;
+      previewReviewFormContainer.innerHTML = '';
+
+      const token = localStorage.getItem('bookverseToken');
+      if (!token) {
+        previewReviewFormContainer.innerHTML = '<p style="margin-top:12px; color:#4b5563;">Login to save reviews after delivery. Reviews can only be written from My Orders.</p>';
+        return;
+      }
+
+      previewReviewFormContainer.innerHTML = '<p style="margin-top:12px; color:#4b5563;">Reviews can only be submitted from My Orders after delivery. Open My Orders to leave or edit your review.</p>';
+    }
+
+    async function submitPreviewReview(event) {
+      event.preventDefault();
+      const ratingInput = document.querySelector('input[name="previewRating"]:checked');
+      const commentInput = document.getElementById('previewReviewComment');
+      const messageBox = document.getElementById('previewReviewMessage');
+      const rating = ratingInput ? Number(ratingInput.value) : 0;
+      const comment = commentInput ? commentInput.value.trim() : '';
+
+      if (!messageBox) return;
+      messageBox.style.display = 'block';
+
+      if (!rating || rating < 1 || rating > 5 || !comment) {
+        messageBox.textContent = 'Please choose a rating and write a review comment.';
+        messageBox.className = 'message error';
+        return;
+      }
+
+      await loadBadWords();
+      const censoredComment = containsBadWords(comment) ? sanitizeBadWords(comment) : comment;
+      if (censoredComment !== comment) {
+        if (commentInput) commentInput.value = censoredComment;
+        messageBox.textContent = 'Prohibited words were censored in your review.';
+        messageBox.className = 'message error';
+      }
+
+      const token = localStorage.getItem('bookverseToken');
+      if (!token) {
+        messageBox.textContent = 'Please login to submit your review.';
+        messageBox.className = 'message error';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/reviews', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ item_id: currentPreviewItemId, rating, review_text: censoredComment })
+        });
+        const result = await res.json();
+        if (!res.ok) {
+          messageBox.textContent = result.error || 'Unable to submit review.';
+          messageBox.className = 'message error';
+          return;
+        }
+
+        messageBox.textContent = 'Review submitted successfully. It now appears on this item.';
+        messageBox.className = 'message success';
+        if (commentInput) commentInput.value = '';
+        if (ratingInput) ratingInput.checked = false;
+        await loadPreviewReviews(currentPreviewItemId);
+      } catch (error) {
+        console.error('Preview review submit error:', error);
+        messageBox.textContent = 'Unable to submit review right now. Please try again later.';
+        messageBox.className = 'message error';
+      }
     }
 
     function renderSideCartItems() {

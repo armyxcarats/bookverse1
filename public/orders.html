@@ -34,10 +34,20 @@
     const token = localStorage.getItem('bookverseToken');
     const user = localStorage.getItem('bookverseUser') ? JSON.parse(localStorage.getItem('bookverseUser')) : null;
 
+    function clearSessionAndRedirect() {
+      localStorage.removeItem('bookverseToken');
+      localStorage.removeItem('bookverseUser');
+      window.location.href = '/login.html';
+    }
+
     // Admin check: only admin can access this page
     async function checkAdmin() {
       if (!token || !user) {
-        window.location.href = '/';
+        clearSessionAndRedirect();
+        return false;
+      }
+      if (user.deleted_at) {
+        clearSessionAndRedirect();
         return false;
       }
       try {
@@ -49,7 +59,7 @@
         });
       } catch (xhr) {
         if (xhr.status === 403) {
-          window.location.href = '/';
+          clearSessionAndRedirect();
           return false;
         }
         window.location.href = '/';

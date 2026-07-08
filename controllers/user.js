@@ -12,7 +12,9 @@ const registerUser = async (req, res) => {
         let imagePath = null;
 
         if (req.file) {
-            imagePath = req.file.path.replace(/\\/g, '/');
+            // Store a web-friendly path under /images/<filename>
+            const filename = req.file.filename || (req.file.path ? require('path').basename(req.file.path) : null);
+            if (filename) imagePath = '/images/' + filename;
         }
 
         // Validate required fields
@@ -52,7 +54,8 @@ const registerUser = async (req, res) => {
                 customer: {
                     fname: customer.fname,
                     lname: customer.lname,
-                    phone: customer.phone
+                    phone: customer.phone,
+                    image_path: customer.image_path
                 }
             },
             token
@@ -79,14 +82,13 @@ const loginUser = async (req, res) => {
             // Attempt normal Sequelize lookup
             user = await User.findOne({
                 where: {
-                    email,
-                    deleted_at: null
+                    email
                 }
             });
         } catch (dbErr) {
             // If DB schema differs (missing columns like `role`), fallback to raw query
             console.warn('Sequelize lookup failed, falling back to raw query ->', dbErr && dbErr.message);
-            const sql = 'SELECT id, name, email, password, deleted_at FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1';
+            const sql = 'SELECT id, name, email, password, deleted_at FROM users WHERE email = ? LIMIT 1';
             const [results] = await db.sequelize.query(sql, { replacements: [email], type: db.Sequelize.QueryTypes.SELECT });
             if (results && results.id) {
                 user = results; // plain object with fields
@@ -99,12 +101,15 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
+        if (user.deleted_at) {
+            return res.status(403).json({ success: false, message: 'Your account has been deactivated by the admin. Please contact the admin first.' });
+        }
+
         // Compare passwords
         const match = await bcrypt.compare(password, user.password);
         if (!match) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
-
 
         // Generate JWT token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -136,6 +141,7 @@ const loginUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role || 'user',
+            deleted_at: user.deleted_at || null,
             customer: customer ? {
                 fname: customer.fname,
                 lname: customer.lname,
@@ -169,7 +175,8 @@ const updateUser = async (req, res) => {
 
         let imagePath = null;
         if (req.file) {
-            imagePath = req.file.path.replace(/\\/g, "/");
+            const filename = req.file.filename || (req.file.path ? require('path').basename(req.file.path) : null);
+            if (filename) imagePath = '/images/' + filename;
         }
 
         // Find or create customer record
@@ -198,10 +205,11 @@ const updateUser = async (req, res) => {
             });
         }
 
+        const fresh = await Customer.findOne({ where: { user_id: userId } });
         return res.status(200).json({
             success: true,
             message: 'Profile updated successfully',
-            customer
+            customer: fresh ? fresh.get({ plain: true }) : null
         });
     } catch (error) {
         console.log(error);

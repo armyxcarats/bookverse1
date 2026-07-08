@@ -15,9 +15,12 @@ exports.isAuthenticatedUser = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findOne({ where: { id: decoded.id, deleted_at: null } });
+        const user = await User.findOne({ where: { id: decoded.id } });
         if (!user) {
             return res.status(401).json({ error: 'Invalid or expired token' });
+        }
+        if (user.deleted_at) {
+            return res.status(403).json({ error: 'Your account has been deactivated by the admin. Please contact the admin first.' });
         }
 
         req.user = user;

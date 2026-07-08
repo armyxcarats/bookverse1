@@ -5,12 +5,14 @@
   <title>Bookverse Admin</title>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
   <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background: #f4f4f8;
-      color: #1f1f1f;
       margin: 0;
+      min-height: 100vh;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1f1f1f;
+      background: radial-gradient(circle at top, #edf2ff 0%, #eff3fb 35%, #f8fafc 100%);
     }
 
     .admin-header {
@@ -19,48 +21,77 @@
       justify-content: space-between;
       align-items: center;
       gap: 16px;
-      padding: 24px 32px;
-      background: #fff;
-      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+      padding: 30px 36px;
+      background: linear-gradient(135deg, #640d14 0%, #8a1f37 100%);
+      color: white;
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.14);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
 
     .admin-header h2 {
       margin: 0;
-      font-size: 1.75rem;
-      letter-spacing: -0.02em;
+      font-size: 2rem;
+      letter-spacing: -0.04em;
+      color: #f8fafc;
+    }
+
+    .admin-header p,
+    .admin-header-subtitle {
+      margin: 8px 0 0;
+      color: rgba(248, 250, 252, 0.85);
+      max-width: 520px;
+      line-height: 1.6;
+    }
+
+    .admin-header-user {
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+      color: rgba(255, 255, 255, 0.95);
     }
 
     .admin-toolbar {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
       margin-bottom: 24px;
       padding: 0 24px;
     }
 
     .admin-toolbar .admin-button {
-      border-radius: 999px;
-      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 16px;
+      border: 1px solid rgba(100, 13, 20, 0.12);
       background: white;
-      color: #1f1f1f;
-      padding: 12px 20px;
+      color: #3b0f1a;
+      padding: 14px 18px;
       cursor: pointer;
-      transition: all 0.18s ease;
-      font-weight: 600;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(100, 13, 20, 0.04);
     }
 
-    .admin-toolbar .admin-button.active {
-      background: #fde8eb;
-      border-color: #d99ca6;
-      color: #640d14;
+    .admin-toolbar .admin-button.active,
+    .admin-toolbar .admin-button.button-primary {
+      background: #640d14;
+      color: white;
+      border-color: transparent;
     }
 
     .admin-toolbar .admin-button:hover {
-      background: #f8e6ea;
+      transform: translateY(-1px);
+      background: #fdebed;
       border-color: #d99ca6;
       color: #640d14;
+    }
+
+    .admin-toolbar .admin-button.button-primary:hover {
+      background: #530b13;
+      color: white;
+    }
+
+    #adminName {
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.92);
     }
 
     .admin-toolbar .admin-actions {
@@ -71,16 +102,95 @@
       align-items: center;
     }
 
+    .admin-toolbar button {
+      min-width: 130px;
+    }
+
+    button.editBtn,
+    button.delBtn {
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+    }
+
+    button.editBtn {
+      background: #ecfdf5;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    button.delBtn {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    button.editBtn:hover,
+    button.delBtn:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .modal .card h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+      color: #2f1721;
+    }
+
+    label {
+      font-weight: 600;
+      color: #3b0f1a;
+    }
+
     .page-shell {
       max-width: 1200px;
       margin: 0 auto 40px;
-      padding: 24px 0 0;
+      padding: 32px 0 0;
     }
 
     .section-title {
       margin: 0 0 14px;
-      font-size: 1.2rem;
-      color: #2f2f2f;
+      font-size: 1.4rem;
+      color: #3b0f1a;
+      letter-spacing: -0.02em;
+    }
+
+    .page-shell section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 28px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .admin-table-container {
+      overflow-x: auto;
+      border-radius: 20px;
+    }
+
+    table.dataTable {
+      border-radius: 20px !important;
+      overflow: hidden;
+    }
+
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dataTables_length select {
+      border-radius: 14px;
+      border: 1px solid rgba(100, 13, 20, 0.14);
+      padding: 10px 14px;
+      margin-left: 6px;
+    }
+
+    .dataTables_wrapper .dataTables_filter label,
+    .dataTables_wrapper .dataTables_length label {
+      color: #374151;
+      font-weight: 600;
     }
 
     .dashboard-panel {
@@ -96,6 +206,19 @@
       border-radius: 20px;
       padding: 20px;
       box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .dashboard-card .chart-container {
+      width: 100%;
+      min-height: 260px;
+      height: 260px;
+      position: relative;
+    }
+
+    .dashboard-card canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
     }
 
     .dashboard-card h4 {
@@ -170,9 +293,10 @@
   <header class="admin-header">
     <div>
       <h2>Bookverse - Admin</h2>
-      <p style="margin: 6px 0 0; color: #6b7280;">Access orders, manage books, and control users from a single admin workspace.</p>
+      <p class="admin-header-subtitle">Access orders, manage books, and control users from a single admin workspace.</p>
     </div>
     <div class="admin-actions">
+      <div id="adminName" class="admin-header-user">&nbsp;</div>
       <button id="authBtn" class="admin-button">Login</button>
       <button id="openStore" class="admin-button" onclick="location.href='/'">Open Store</button>
     </div>
@@ -182,9 +306,9 @@
     <div class="admin-toolbar">
       <button id="itemsBtn" class="admin-button active">Manage Books</button>
       <button id="ordersBtn" class="admin-button">View Orders</button>
+      <button id="dashboardBtn" class="admin-button">Dashboard</button>
       <button id="usersBtn" class="admin-button">Manage Users</button>
       <button id="addBtn" class="admin-button button-primary">Add Book</button>
-      <button id="addUserBtn" class="admin-button" style="display:none;">Add User</button>
       <button id="refreshBtn" class="admin-button">Refresh</button>
     </div>
     <section id="itemsTableSection">
@@ -243,21 +367,6 @@
     </div>
   </div>
 
-  <div id="userModal" class="modal">
-    <div class="card">
-      <h3>Add User</h3>
-      <div class="form-row">
-        <label>First Name<input id="u-first" type="text"></label>
-        <label>Last Name<input id="u-last" type="text"></label>
-      </div>
-      <div class="form-row">
-        <label>Email<input id="u-email" type="email"></label>
-        <label>Password<input id="u-password" type="password"></label>
-      </div>
-      <div style="display:flex; gap:10px; margin-top:12px;"><button id="saveUserBtn" class="button button-primary">Create User</button><button id="cancelUserBtn" class="button button-secondary">Cancel</button></div>
-      <div id="userModalMsg" style="margin-top:12px; display:none;" class="message"></div>
-    </div>
-  </div>
 
   <div id="loginModal" class="modal">
     <div class="card" style="width:360px;">
@@ -367,65 +476,13 @@
       }
     }
 
-    function showUserModal(){
-      $('#userModal').css('display','flex');
-      $('#userModalMsg').hide();
-      $('#u-first').val('');
-      $('#u-last').val('');
-      $('#u-email').val('');
-      $('#u-password').val('');
-    }
-
-    function hideUserModal(){
-      $('#userModal').hide();
-    }
-
-    $('#saveUserBtn').on('click', async function(){
-      const firstName = $('#u-first').val().trim();
-      const lastName = $('#u-last').val().trim();
-      const email = $('#u-email').val().trim();
-      const password = $('#u-password').val();
-
-      if (!firstName || !lastName || !email || !password) {
-        $('#userModalMsg').text('All fields are required.').show();
-        return;
-      }
-      if (password.length < 6) {
-        $('#userModalMsg').text('Password must be at least 6 characters.').show();
-        return;
-      }
-
-      try {
-        const token = getToken();
-        await $.ajax({
-          url: '/api/v1/register',
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          contentType: 'application/json',
-          data: JSON.stringify({
-            firstName,
-            lastName,
-            email,
-            password
-          }),
-          dataType: 'json'
-        });
-        hideUserModal();
-        loadUsers();
-      } catch (xhr) {
-        const body = xhr.responseJSON || {};
-        $('#userModalMsg').text(body.error || body.message || 'Unable to create user.').show();
-      }
-    });
-
     $('#itemsBtn').on('click', () => { showItemsSection(); loadItems(); });
     $('#ordersBtn').on('click', showOrdersSection);
+    $('#dashboardBtn').on('click', showDashboardSection);
     $('#usersBtn').on('click', showUsersSection);
     $('#addBtn').on('click', ()=> showModal(false,{}));
-    $('#addUserBtn').on('click', showUserModal);
     $('#refreshBtn').on('click', loadItems);
     $('#cancelBtn').on('click', hideModal);
-    $('#cancelUserBtn').on('click', hideUserModal);
 
     $('#m-on-sale').on('change', function(){
       $('#saleNote').toggle($(this).is(':checked'));
@@ -473,7 +530,10 @@
         hideModal();
         await loadItems();
       }catch(e){
-        $('#modalMsg').text('Save failed. Ensure you are logged in and have permission.').show();
+          console.error('Save item error', e);
+          const body = e && e.responseJSON ? e.responseJSON : null;
+          const msg = (body && (body.error || body.message || JSON.stringify(body))) || (e && e.responseText) || 'Save failed. Ensure you are logged in and have permission.';
+          $('#modalMsg').text(msg).show();
       }
     });
 
@@ -494,7 +554,6 @@
       $('#ordersSection').hide();
       $('#usersSection').hide();
       $('#itemsBtn, #ordersBtn, #usersBtn, #addBtn, #refreshBtn').show();
-      $('#addUserBtn').hide();
       setAuthUI();
       showItemsSection();
       loadItems();
@@ -510,7 +569,7 @@
     }
 
     function resetSectionButtons() {
-      $('#itemsBtn, #ordersBtn, #usersBtn').removeClass('active');
+      $('#itemsBtn, #ordersBtn, #dashboardBtn, #usersBtn').removeClass('active');
     }
 
     function showItemsSection(){
@@ -531,7 +590,7 @@
       $('#dashboardSection').hide();
       $('#itemsTableSection').hide();
       $('#ordersSection').show();
-      $('#addBtn, #refreshBtn, #addUserBtn').hide();
+      $('#addBtn, #refreshBtn').hide();
       loadOrders();
     }
 
@@ -543,8 +602,18 @@
       $('#ordersSection').hide();
       $('#usersSection').show();
       $('#addBtn, #refreshBtn').hide();
-      $('#addUserBtn').show();
       loadUsers();
+    }
+
+    function showDashboardSection(){
+      resetSectionButtons();
+      $('#dashboardBtn').addClass('active');
+      $('#dashboardSection').show();
+      $('#itemsTableSection').hide();
+      $('#ordersSection').hide();
+      $('#usersSection').hide();
+      $('#addBtn, #refreshBtn').hide();
+      loadDashboard();
     }
 
     $(document).ready(async ()=>{
@@ -588,21 +657,31 @@
 
     function setAuthUI() {
       const btn = document.getElementById('authBtn');
+      const nameEl = document.getElementById('adminName');
       if (!btn) return;
       if (isAdminLoggedIn()) {
         btn.textContent = 'Logout';
         btn.onclick = () => {
           localStorage.removeItem('bookverseToken');
           localStorage.removeItem('bookverseUser');
+          if (nameEl) nameEl.textContent = '';
           setAuthUI();
           hideAdminUI();
           showLoginModal();
         };
+        // show name if available
+        try {
+          const u = getStoredUser();
+          if (nameEl) nameEl.textContent = u && (u.name || (u.firstName && u.lastName) ? (u.name || (u.firstName + ' ' + u.lastName)) : u.email) || '';
+        } catch (e) { if (nameEl) nameEl.textContent = ''; }
       } else {
         btn.textContent = 'Login';
         btn.onclick = showLoginModal;
       }
     }
+
+    let salesChart = null;
+    let itemsChart = null;
 
     async function loadDashboard() {
       const token = getToken();
@@ -621,7 +700,20 @@
         const addressRows = (addressesResp.rows || []).slice(0, 5);
         const itemRows = (itemsResp.rows || []).slice(0, 5);
 
+        if (!salesRows.length && !addressRows.length && !itemRows.length) {
+          $('#dashboardSummary').html('<div class="message" style="display:block;">No dashboard data available yet.</div>');
+          return;
+        }
+
         const dashboardHtml = `
+          <div class="dashboard-card">
+            <h4>Monthly Sales</h4>
+            <div class="chart-container"><canvas id="salesBar"></canvas></div>
+          </div>
+          <div class="dashboard-card">
+            <h4>Top Items (Qty Sold)</h4>
+            <div class="chart-container"><canvas id="itemsPie"></canvas></div>
+          </div>
           <div class="dashboard-card">
             <h4>Recent Sales</h4>
             <table class="dashboard-table"><thead><tr><th>Month</th><th>Total</th></tr></thead><tbody>${salesRows.map(r => `<tr><td>${r.month || 'Unknown'}</td><td>₱${Number(r.total || 0).toFixed(2)}</td></tr>`).join('')}</tbody></table>
@@ -637,10 +729,66 @@
         `;
 
         $('#dashboardSummary').html(dashboardHtml);
+
+        if (salesChart) {
+          salesChart.destroy();
+          salesChart = null;
+        }
+        if (itemsChart) {
+          itemsChart.destroy();
+          itemsChart = null;
+        }
+
+        try {
+          const months = (salesRows || []).map(r => r.month || 'N/A');
+          const totals = (salesRows || []).map(r => Number(r.total || 0));
+          const barCtx = document.getElementById('salesBar').getContext('2d');
+          salesChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+              labels: months,
+              datasets: [{
+                label: 'Sales',
+                data: totals,
+                backgroundColor: months.map(() => '#7c2d12')
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+
+          const itemLabels = (itemRows || []).map(r => r.items || 'Item');
+          const itemTotals = (itemRows || []).map(r => Number(r.total || 0));
+          const pieCtx = document.getElementById('itemsPie').getContext('2d');
+          itemsChart = new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+              labels: itemLabels,
+              datasets: [{
+                data: itemTotals,
+                backgroundColor: ['#7c2d12', '#b91c1c', '#f97316', '#f59e0b', '#10b981']
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false
+            }
+          });
+        } catch (chartErr) {
+          console.warn('Chart error', chartErr);
+        }
       } catch (xhr) {
-        const body = xhr.responseJSON || {};
-        message.text(body.error || 'Unable to load dashboard data.').show();
+        const body = xhr && (xhr.responseJSON || xhr.responseText) ? (xhr.responseJSON || JSON.parse(xhr.responseText || '{}')) : {};
+        const errMsg = body && (body.error || body.message) ? (body.error || body.message) : 'Unable to load dashboard data.';
+        message.text(errMsg).show();
         $('#dashboardSummary').html('');
+        if (xhr && xhr.status === 401) {
+          showLoginModal();
+        }
       }
     }
 
@@ -684,8 +832,7 @@
             { title: 'Address', data: 'shipping_address' },
             { title: 'Zip Code', data: 'shipping_zipcode' },
             { title: 'Items', data: 'items' },
-            { title: 'Total', data: 'total_amount', render: v => v ? '₱' + Number(v).toFixed(2) : '₱0.00' },
-            { title: 'Actions', data: null, orderable: false, render: () => '<button class="delete-order">Delete</button>' }
+            { title: 'Total', data: 'total_amount', render: v => v ? '₱' + Number(v).toFixed(2) : '₱0.00' }
           ]
         });
 
@@ -711,22 +858,6 @@
           }
         });
 
-        $('#ordersTable tbody').on('click', 'button.delete-order', async function() {
-          const row = window.orderTable.row($(this).parents('tr')).data();
-          if (!confirm('Delete order #' + row.order_id + '?')) return;
-          try {
-            await $.ajax({
-              url: '/api/v1/orders/' + row.order_id,
-              method: 'DELETE',
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            message.text('Order deleted').show();
-            loadOrders();
-          } catch (xhr) {
-            const body = xhr.responseJSON || {};
-            message.text(body.error || 'Delete failed').show();
-          }
-        });
       } else {
         window.orderTable.clear().rows.add(orders).draw();
       }
@@ -900,6 +1031,8 @@
         localStorage.setItem('bookverseUser', JSON.stringify(data.user));
         hideLoginModal();
         showAdminUI();
+        // If the dashboard was requested, show it now so charts load immediately after login
+        try { showDashboardSection(); } catch (e) { /* ignore if not defined yet */ }
       } catch (xhr) {
         const data = xhr.responseJSON || {};
         $('#loginMsg').text(data.message || data.error || 'Login failed').show();

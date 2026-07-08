@@ -146,13 +146,48 @@
     let currentUser = null;
     let uploadedPhotoFile = null;
 
+    function clearSessionAndRedirect() {
+      localStorage.removeItem('bookverseToken');
+      localStorage.removeItem('bookverseUser');
+      window.location.href = '/login';
+    }
+
     function getStoredUser() {
       const raw = localStorage.getItem('bookverseUser');
-      return raw ? JSON.parse(raw) : null;
+      const user = raw ? JSON.parse(raw) : null;
+      if (user && user.deleted_at) {
+        clearSessionAndRedirect();
+        return null;
+      }
+      return user;
     }
 
     function getToken() {
       return localStorage.getItem('bookverseToken');
+    }
+
+    async function verifyActiveUserOnLoad() {
+      const user = getStoredUser();
+      const token = getToken();
+      if (!user || !token) return false;
+      try {
+        const res = await fetch('/api/v1/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          clearSessionAndRedirect();
+          return false;
+        }
+        const data = await res.json();
+        if (data.user) {
+          localStorage.setItem('bookverseUser', JSON.stringify(data.user));
+          currentUser = data.user;
+        }
+        return true;
+      } catch (error) {
+        console.warn('Unable to verify session:', error);
+        return true;
+      }
     }
 
     function showMessage(text, type = 'success') {
@@ -353,13 +388,16 @@
     });
 
     // Initialize
-    currentUser = getStoredUser();
-    if (!currentUser) {
-      document.querySelector('.profile-page').innerHTML = '<p style="text-align:center; margin-top:40px;">Please <a href="/login">log in</a> to view your profile.</p>';
-    } else {
-      renderUserActions();
-      renderViewMode();
-    }
+    verifyActiveUserOnLoad().then((active) => {
+      if (!active) return;
+      currentUser = getStoredUser();
+      if (!currentUser) {
+        document.querySelector('.profile-page').innerHTML = '<p style="text-align:center; margin-top:40px;">Please <a href="/login">log in</a> to view your profile.</p>';
+      } else {
+        renderUserActions();
+        renderViewMode();
+      }
+    });
   </script>
 </body>
 </html>

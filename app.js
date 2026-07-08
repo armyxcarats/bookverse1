@@ -9,6 +9,7 @@ const items = require('./routes/item');
 const users = require('./routes/user');
 const orders = require('./routes/order');
 const dashboard = require('./routes/dashboard')
+const reviews = require('./routes/review')
 
 // app.get('/', (req, res) => {
 //     res.send('Hello from nodejs!')
@@ -21,6 +22,7 @@ app.use('/api/v1', items);
 app.use('/api/v1', users);
 app.use('/api/v1', orders);
 app.use('/api/v1', dashboard);
+app.use('/api/v1', reviews);
 
 // Serve admin pages directly. Client-side JS enforces auth using the token stored in localStorage.
 app.get(['/admin', '/admin.html'], (req, res) => {

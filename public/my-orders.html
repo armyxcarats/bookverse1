@@ -29,6 +29,14 @@
     .item-details { flex: 1; }
     .item-title { font-weight: 600; margin: 0 0 4px; }
     .item-meta { font-size: 0.9rem; color: #666; }
+    .order-review-button { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; }
+    .order-review-form { margin-top: 14px; border-top: 1px solid #e5e7eb; padding-top: 14px; }
+    .order-review-form textarea { width: 100%; min-height: 100px; padding: 10px; border: 1px solid #d1d5db; border-radius: 12px; resize: vertical; }
+    .order-review-form .rating-options { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .order-review-form .rating-options label { display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.95rem; }
+    .order-review-form .rating-options input { margin:0; }
+    .order-review-form button { margin-top: 10px; }
+    .order-review-message { margin-top: 10px; font-size: 0.95rem; }
     .payment-summary { background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 12px; }
     .payment-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
     .payment-row.total { border-top: 1px solid #ddd; padding-top: 6px; font-weight: 600; color: #333; }
@@ -91,6 +99,15 @@
 
     async function loadMyOrders() {
       if (!token || !user) {
+        localStorage.removeItem('bookverseToken');
+        localStorage.removeItem('bookverseUser');
+        window.location.href = '/login';
+        return;
+      }
+
+      if (user.deleted_at) {
+        localStorage.removeItem('bookverseToken');
+        localStorage.removeItem('bookverseUser');
         window.location.href = '/login';
         return;
       }
@@ -147,16 +164,23 @@
       }
 
       const html = orders.map(order => {
-        const itemsHtml = (order.order_items || []).map(item => `
-          <div class="item-row">
+        const delivered = String(order.status || '').toLowerCase() === 'delivered';
+        const itemsHtml = (order.order_items || []).map(item => {
+          const reviewButton = delivered ? `
+            <button type="button" class="button button-secondary order-review-button" data-item-id="${item.item_id}" data-item-title="${(item.description || 'Item').replace(/"/g, '&quot;')}">Write Review</button>
+          ` : '';
+          return `
+          <div class="item-row" id="order-item-${item.item_id}">
             <img src="${item.img_path ? (item.img_path.startsWith('http') || item.img_path.startsWith('/') ? item.img_path : '/' + item.img_path) : 'https://via.placeholder.com/80'}" alt="${item.description || 'Item'}" class="item-image" onerror="this.src='https://via.placeholder.com/80';" />
             <div class="item-details">
               <div class="item-title">${item.description || 'Unknown Item'}</div>
               <div class="item-meta">Quantity: <strong>${item.quantity || 1}</strong></div>
               <div class="item-meta">Price: <strong>₱${Number(item.sell_price || 0).toFixed(2)}</strong></div>
+              ${reviewButton}
+              <div class="order-review-container" id="review-container-${item.item_id}" style="display:none;"></div>
             </div>
           </div>
-        `).join('');
+        `}).join('');
 
         const totalAmount = order.total_amount || 0;
         const arrivalDate = estimateArrival(order.date_shipped);
@@ -181,6 +205,7 @@
                 <span class="order-meta-label">Est. Arrival</span>
                 <span>${arrivalDate}</span>
               </div>
+              ${ (order.shipping_address || order.shipping_zipcode || order.shipping_phone) ? `
               <div class="order-meta-item">
                 <span class="order-meta-label">Shipping Address</span>
                 <span>${order.shipping_address || 'N/A'}</span>
@@ -193,6 +218,7 @@
                 <span class="order-meta-label">Phone</span>
                 <span>${order.shipping_phone || 'N/A'}</span>
               </div>
+              ` : '' }
             </div>
 
             <!-- Delivery details editing removed: details are set during checkout -->
@@ -221,6 +247,94 @@
       }).join('');
 
       container.innerHTML = html;
+      attachReviewButtonHandlers();
+    }
+
+    function attachReviewButtonHandlers() {
+      document.querySelectorAll('.order-review-button').forEach(button => {
+        button.addEventListener('click', () => {
+          const itemId = button.dataset.itemId;
+          const itemTitle = button.dataset.itemTitle;
+          toggleReviewForm(itemId, itemTitle);
+        });
+      });
+    }
+
+    function toggleReviewForm(itemId, itemTitle) {
+      const container = document.getElementById(`review-container-${itemId}`);
+      if (!container) return;
+      if (container.style.display === 'block') {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+      }
+      container.style.display = 'block';
+      container.innerHTML = `
+        <form class="order-review-form" data-item-id="${itemId}">
+          <div class="rating-options">
+            <label><input type="radio" name="rating-${itemId}" value="5"> ★ 5</label>
+            <label><input type="radio" name="rating-${itemId}" value="4"> ★ 4</label>
+            <label><input type="radio" name="rating-${itemId}" value="3"> ★ 3</label>
+            <label><input type="radio" name="rating-${itemId}" value="2"> ★ 2</label>
+            <label><input type="radio" name="rating-${itemId}" value="1"> ★ 1</label>
+          </div>
+          <textarea name="reviewText" placeholder="Write your review for ${itemTitle}..."></textarea>
+          <button type="submit" class="button button-primary">Submit Review</button>
+          <div class="order-review-message" id="review-message-${itemId}" style="display:none"></div>
+        </form>
+      `;
+      const form = container.querySelector('.order-review-form');
+      if (form) {
+        form.addEventListener('submit', submitOrderReview);
+      }
+    }
+
+    async function submitOrderReview(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const itemId = form.dataset.itemId;
+      const ratingInput = form.querySelector(`input[name="rating-${itemId}"]:checked`);
+      const comment = form.querySelector('textarea[name="reviewText"]').value.trim();
+      const messageBox = document.getElementById(`review-message-${itemId}`);
+      if (!messageBox) return;
+      messageBox.style.display = 'block';
+      if (!ratingInput || !comment) {
+        messageBox.textContent = 'Please choose a rating and write a comment.';
+        messageBox.style.color = '#b91c1c';
+        return;
+      }
+      const token = localStorage.getItem('bookverseToken');
+      if (!token) {
+        messageBox.textContent = 'You must be logged in to submit a review.';
+        messageBox.style.color = '#b91c1c';
+        return;
+      }
+      try {
+        const response = await fetch('/api/v1/reviews', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ item_id: Number(itemId), rating: Number(ratingInput.value), review_text: comment })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          messageBox.textContent = data.error || 'Unable to submit review.';
+          messageBox.style.color = '#b91c1c';
+          return;
+        }
+        messageBox.textContent = 'Your review has been submitted successfully. Redirecting to the item page...';
+        messageBox.style.color = '#155724';
+        form.reset();
+        localStorage.setItem('bookverseReviewRedirect', JSON.stringify({ itemId: Number(itemId) }));
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 700);
+      } catch (error) {
+        messageBox.textContent = 'Review submission failed. Please try again later.';
+        messageBox.style.color = '#b91c1c';
+      }
     }
 
     // Load orders on page load
